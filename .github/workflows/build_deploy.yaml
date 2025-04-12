@@ -1,56 +1,59 @@
 name: Build and deploy runner
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches:
+            - main
 
 jobs:
-  build:
-    name: Build runner
+    build:
+        name: Build runner
 
-    runs-on: ubuntu-latest
+        runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
 
-      - name: Enable corepack
-        run: corepack enable
+            - name: Enable corepack
+              run: corepack enable
 
-      - name: Setup node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: yarn
+            - name: Setup node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: yarn
 
-      - name: yarn install
-        run: yarn install --immutable
+            - name: Install
+              run: yarn install --immutable
 
-      - name: yarn build
-        run: yarn build
+            - name: Test
+              run: yarn test
 
-      - name: Upload artifacts
-        id: deployment
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: dist/
+            - name: Build
+              run: yarn build
 
-  deploy:
-    needs: build
+            - name: Upload artifacts
+              id: deployment
+              uses: actions/upload-pages-artifact@v3
+              with:
+                  path: dist/
 
-    name: Deploy runner
+    deploy:
+        needs: build
 
-    permissions:
-      pages: write
-      id-token: write
+        name: Deploy runner
 
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+        permissions:
+            pages: write
+            id-token: write
 
-    runs-on: ubuntu-latest
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
 
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Deploy to GitHub Pages
+              id: deployment
+              uses: actions/deploy-pages@v4
