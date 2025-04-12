@@ -32,7 +32,11 @@ export class ConductorBridge extends BasicEvaluator {
 
             // Evaluate the parsed tree and lower to VM instructions
             const instructions = this.visitor.visit(tree)
-            const result = VM.execute(instructions)
+            const resultStack = VM.execute(instructions)
+            if (resultStack.length === 0) {
+                throw new Error('Expected non-empty result stack')
+            }
+            const result = resultStack.at(-1)
 
             // Send the result to the REPL
             this.conductor.sendOutput(`Result of expression: ${result}`)
