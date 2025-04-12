@@ -4,7 +4,7 @@ export namespace VM {
 
     // Instructions *without* arguments
     export interface NoArgInstr {
-        opcode: 'ADD' | 'SUB' | 'HALT'
+        opcode: 'ADD' | 'SUB' | 'MUL' | 'HALT'
     }
 
     // Instructions *with* a numeric argument (e.g., value to push)
@@ -49,6 +49,15 @@ export namespace VM {
                     const b_sub = stack.pop()!
                     const a_sub = stack.pop()!
                     stack.push(a_sub - b_sub)
+                    instructionPointer++
+                    break
+
+                case 'MUL':
+                    if (stack.length < 2)
+                        throw new Error('Stack underflow for MUL')
+                    const b_mul = stack.pop()!
+                    const a_mul = stack.pop()!
+                    stack.push(a_mul * b_mul)
                     instructionPointer++
                     break
 

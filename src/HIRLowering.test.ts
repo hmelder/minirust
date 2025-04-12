@@ -44,4 +44,14 @@ test('AST Lowering', async (t) => {
             { opcode: 'HALT' },
         ])
     })
+    await t.test('should lower chained mul,add binop', () => {
+        assert.deepStrictEqual(lowerExpression('2 * 2 + 3;'), [
+            { opcode: 'PUSH', value: 2 },
+            { opcode: 'PUSH', value: 2 },
+            { opcode: 'MUL' },
+            { opcode: 'PUSH', value: 3 },
+            { opcode: 'ADD' },
+            { opcode: 'HALT' },
+        ])
+    })
 })

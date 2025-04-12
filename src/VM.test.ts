@@ -33,4 +33,17 @@ test('VM', async (t) => {
             [6]
         )
     })
+    await t.test('should execute chained fmac binop', () => {
+        assert.deepStrictEqual(
+            VM.execute([
+                { opcode: 'PUSH', value: 2 },
+                { opcode: 'PUSH', value: 2 },
+                { opcode: 'MUL' },
+                { opcode: 'PUSH', value: 3 },
+                { opcode: 'ADD' },
+                { opcode: 'HALT' },
+            ]),
+            [7]
+        )
+    })
 })

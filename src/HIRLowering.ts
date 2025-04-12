@@ -40,6 +40,9 @@ export class HIRLowering
             case '-':
                 opcode = 'SUB'
                 break
+            case '*':
+                opcode = 'MUL'
+                break
             default:
                 throw new Error(`Unknown operator: ${op}`)
         }
