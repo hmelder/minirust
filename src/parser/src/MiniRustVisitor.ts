@@ -6,8 +6,8 @@ import { AbstractParseTreeVisitor } from "antlr4ng";
 import { ProgContext } from "./MiniRustParser.js";
 import { StatementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
-import { ExpressionContext } from "./MiniRustParser.js";
-import { Expression_without_blockContext } from "./MiniRustParser.js";
+import { LiteralExprContext } from "./MiniRustParser.js";
+import { BinOpExprContext } from "./MiniRustParser.js";
 import { Literal_expressionContext } from "./MiniRustParser.js";
 
 
@@ -38,17 +38,19 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitExpression_statement?: (ctx: Expression_statementContext) => Result;
     /**
-     * Visit a parse tree produced by `MiniRustParser.expression`.
+     * Visit a parse tree produced by the `LiteralExpr`
+     * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitExpression?: (ctx: ExpressionContext) => Result;
+    visitLiteralExpr?: (ctx: LiteralExprContext) => Result;
     /**
-     * Visit a parse tree produced by `MiniRustParser.expression_without_block`.
+     * Visit a parse tree produced by the `BinOpExpr`
+     * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitExpression_without_block?: (ctx: Expression_without_blockContext) => Result;
+    visitBinOpExpr?: (ctx: BinOpExprContext) => Result;
     /**
      * Visit a parse tree produced by `MiniRustParser.literal_expression`.
      * @param ctx the parse tree

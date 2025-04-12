@@ -6,8 +6,8 @@ import { ErrorNode, ParseTreeListener, ParserRuleContext, TerminalNode } from "a
 import { ProgContext } from "./MiniRustParser.js";
 import { StatementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
-import { ExpressionContext } from "./MiniRustParser.js";
-import { Expression_without_blockContext } from "./MiniRustParser.js";
+import { LiteralExprContext } from "./MiniRustParser.js";
+import { BinOpExprContext } from "./MiniRustParser.js";
 import { Literal_expressionContext } from "./MiniRustParser.js";
 
 
@@ -47,25 +47,29 @@ export class MiniRustListener implements ParseTreeListener {
      */
     exitExpression_statement?: (ctx: Expression_statementContext) => void;
     /**
-     * Enter a parse tree produced by `MiniRustParser.expression`.
+     * Enter a parse tree produced by the `LiteralExpr`
+     * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
      */
-    enterExpression?: (ctx: ExpressionContext) => void;
+    enterLiteralExpr?: (ctx: LiteralExprContext) => void;
     /**
-     * Exit a parse tree produced by `MiniRustParser.expression`.
+     * Exit a parse tree produced by the `LiteralExpr`
+     * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
      */
-    exitExpression?: (ctx: ExpressionContext) => void;
+    exitLiteralExpr?: (ctx: LiteralExprContext) => void;
     /**
-     * Enter a parse tree produced by `MiniRustParser.expression_without_block`.
+     * Enter a parse tree produced by the `BinOpExpr`
+     * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
      */
-    enterExpression_without_block?: (ctx: Expression_without_blockContext) => void;
+    enterBinOpExpr?: (ctx: BinOpExprContext) => void;
     /**
-     * Exit a parse tree produced by `MiniRustParser.expression_without_block`.
+     * Exit a parse tree produced by the `BinOpExpr`
+     * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
      */
-    exitExpression_without_block?: (ctx: Expression_without_blockContext) => void;
+    exitBinOpExpr?: (ctx: BinOpExprContext) => void;
     /**
      * Enter a parse tree produced by `MiniRustParser.literal_expression`.
      * @param ctx the parse tree

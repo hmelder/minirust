@@ -1,12 +1,13 @@
 import { AbstractParseTreeVisitor } from 'antlr4ng'
 import {
+    ExpressionContext,
     Expression_statementContext,
-    Expression_without_blockContext,
     Literal_expressionContext,
     ProgContext,
     StatementContext,
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
+import { BinOpExprContext } from './parser/src/MiniRustParser'
 
 export class MiniRustEvaluator
     extends AbstractParseTreeVisitor<number>
@@ -22,13 +23,40 @@ export class MiniRustEvaluator
     }
 
     visitExpression_statement(ctx: Expression_statementContext): number {
-        return this.visit(ctx.expression_without_block())
+        return this.visit(ctx.expression())
     }
 
-    visitExpression_without_block(
-        ctx: Expression_without_blockContext
-    ): number {
-        return this.visit(ctx.literal_expression())
+    visitBinOpExpr(ctx: BinOpExprContext): number {
+        const left = this.visit(ctx.getChild(0) as ExpressionContext)
+        const op = ctx.getChild(1).getText()
+        const right = this.visit(ctx.getChild(2) as ExpressionContext)
+
+        switch (op) {
+            case '+':
+                return left + right
+            case '-':
+                return left - right
+            case '*':
+                return left * right
+            case '/':
+                if (right == 0) {
+                    throw Error('Division by zero')
+                }
+                return left / right
+            case '%':
+                if (right == 0) {
+                    throw Error('Division by zero')
+                }
+                return left % right
+            case '&':
+                return left & right
+            case '^':
+                return left ^ right
+            case '|':
+                return left | right
+            default:
+                throw new Error(`Unknown operator: ${op}`)
+        }
     }
 
     visitLiteral_expression(ctx: Literal_expressionContext): number {

@@ -20,6 +20,6 @@ function evaluateExpression(input: string): number {
 // Test definitions using node:test
 test('MiniRustEvaluator', async (t) => {
     await t.test('should evaluate integer literal', () => {
-        assert.strictEqual(evaluateExpression('42'), 42)
+        assert.strictEqual(evaluateExpression('42;'), 42)
     })
 })
