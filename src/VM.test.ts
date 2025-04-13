@@ -3,47 +3,34 @@ import assert from 'node:assert/strict'
 import { VM } from './VM'
 
 test('VM', async (t) => {
-    await t.test('should return last item on stack as return value', () => {
-        assert.deepStrictEqual(
-            VM.execute([{ opcode: 'PUSH', value: 42 }, { opcode: 'HALT' }]),
-            [42]
-        )
+    await t.test('assign and returning works', () => {
+        const instrs: VM.Instr[] = [
+            { opcode: 'ALLOCA', length: 1 },
+            { opcode: 'ASSIGN', local: 0, value: 42, type: 'u32' },
+            { opcode: 'PUSH', loc: 0 },
+            { opcode: 'RETURN' },
+        ]
+        let executor = new VM.Executor(instrs)
+        const ret = executor.run()
+        assert.strictEqual(executor.copyState().status, 'halted')
+        assert.strictEqual(ret.value, 42)
     })
-    await t.test('should execute add binop', () => {
-        assert.deepStrictEqual(
-            VM.execute([
-                { opcode: 'PUSH', value: 1 },
-                { opcode: 'PUSH', value: 2 },
-                { opcode: 'ADD' },
-                { opcode: 'HALT' },
-            ]),
-            [3]
-        )
-    })
-    await t.test('should execute chained add binop', () => {
-        assert.deepStrictEqual(
-            VM.execute([
-                { opcode: 'PUSH', value: 1 },
-                { opcode: 'PUSH', value: 2 },
-                { opcode: 'ADD' },
-                { opcode: 'PUSH', value: 3 },
-                { opcode: 'ADD' },
-                { opcode: 'HALT' },
-            ]),
-            [6]
-        )
-    })
-    await t.test('should execute chained fmac binop', () => {
-        assert.deepStrictEqual(
-            VM.execute([
-                { opcode: 'PUSH', value: 2 },
-                { opcode: 'PUSH', value: 2 },
-                { opcode: 'MUL' },
-                { opcode: 'PUSH', value: 3 },
-                { opcode: 'ADD' },
-                { opcode: 'HALT' },
-            ]),
-            [7]
-        )
+    await t.test('function call and returning works', () => {
+        const instrs: VM.Instr[] = [
+            { opcode: 'ALLOCA', length: 1 }, // For return value and local
+            { opcode: 'ASSIGN', local: 0, value: 42, type: 'u32' },
+            { opcode: 'CALL', ip: 5 },
+            { opcode: 'RETURN' },
+            { opcode: 'NOP' },
+            { opcode: 'NOP' },
+            { opcode: 'ALLOCA', length: 1 },
+            { opcode: 'ASSIGN', local: 0, value: 52, type: 'u32' },
+            { opcode: 'PUSH', loc: 0 },
+            { opcode: 'RETURN' },
+        ]
+        let executor = new VM.Executor(instrs)
+        const ret = executor.run()
+        assert.strictEqual(executor.copyState().status, 'halted')
+        assert.strictEqual(ret.value, 52)
     })
 })

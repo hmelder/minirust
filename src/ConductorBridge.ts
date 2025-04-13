@@ -5,17 +5,19 @@ import { MiniRustLexer } from './parser/src/MiniRustLexer'
 import { MiniRustParser } from './parser/src/MiniRustParser'
 import { CharStream, CommonTokenStream } from 'antlr4ng'
 
-import { HIRLowering } from './HIRLowering'
+import { MIRLowering } from './MIRLowering'
+import { MIRToVMLowering } from './MIRToVMLowering'
 import { VM } from './VM'
+import { MIR } from './MIR'
 
 export class ConductorBridge extends BasicEvaluator {
     private executionCount: number
-    private visitor: HIRLowering
+    private visitor: MIRLowering
 
     constructor(conductor: IRunnerPlugin) {
         super(conductor)
         this.executionCount = 0
-        this.visitor = new HIRLowering()
+        this.visitor = new MIRLowering()
     }
 
     async evaluateChunk(chunk: string): Promise<void> {
@@ -30,13 +32,14 @@ export class ConductorBridge extends BasicEvaluator {
             // Parse the input
             const tree = parser.prog()
 
-            // Evaluate the parsed tree and lower to VM instructions
-            const instructions = this.visitor.visit(tree)
-            const resultStack = VM.execute(instructions)
-            if (resultStack.length === 0) {
-                throw new Error('Expected non-empty result stack')
-            }
-            const result = resultStack.at(-1)
+            // TODO: Check if this actually returns a graph
+            const graph = this.visitor.visit(tree) as MIR.Graph
+            const vmLowering = new MIRToVMLowering(graph)
+            const instrs = vmLowering.lowerFunction()
+            const vm = new VM.Executor(instrs)
+            const resultSlot = vm.run()
+
+            const result = resultSlot.value
 
             // Send the result to the REPL
             this.conductor.sendOutput(`Result of expression: ${result}`)

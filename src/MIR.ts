@@ -37,10 +37,11 @@ export namespace MIR {
 
     // Represents a computation that produces a value
     export type RValue =
-        | { kind: 'use'; operand: Operand } // Simple move/copy
+        //| { kind: 'use'; operand: Operand } // Simple move/copy
+        | { kind: 'use'; place: Place } // Simple move/copy
         | { kind: 'binOp'; op: MirBinOp; left: Operand; right: Operand }
         // | { kind: 'unaryOp'; op: MirUnaryOp; operand: Operand } // If needed
-        | { kind: 'literal'; value: number | boolean /* | string etc */ } // Can sometimes be merged with Operand.literal
+        | { kind: 'literal'; value: number /* | string etc */ } // Can sometimes be merged with Operand.literal
 
     // --- MIR Statements (Inside Basic Blocks) ---
     export type MirStatement = { kind: 'assign'; place: Place; rvalue: RValue } // The most common statement: place = rvalue
@@ -57,7 +58,7 @@ export namespace MIR {
               trueTarget: BasicBlockId
               falseTarget: BasicBlockId
           } // Conditional branch based on operand value
-        | { kind: 'return' } // Return from the current function
+        | { kind: 'return'; rvalue?: RValue } // Return from the current function
         // | { kind: 'call'; func: FuncId; args: Operand[]; destination: Place | null; target: BasicBlockId } // Function calls are more complex, add later if needed
         | { kind: 'unreachable' } // Marks blocks that should not be reached
 
@@ -72,8 +73,8 @@ export namespace MIR {
     export interface Graph {
         // Represents MIR for one function
         entryBlockId: BasicBlockId
-        blocks: Map<BasicBlockId, BasicBlock> // Map for easy lookup
-        locals: Map<LocalId, { name?: string /*, type?: MirType */ }> // Metadata for locals
+        blocks: BasicBlock[]
+        locals: { name?: string /*, type?: MirType */ }[] // Metadata for locals
         localCounter: number // To generate fresh LocalIds
         blockCounter: number // To generate fresh BasicBlockIds
         argCount: number // Number of locals that are arguments

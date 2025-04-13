@@ -18,6 +18,9 @@ expression
     | <assoc=left> expression op=AND expression # BinOpExpr
     | <assoc=left> expression op=XOR expression # BinOpExpr
     | <assoc=left> expression op=OR expression # BinOpExpr
+    // Return expression
+    // https://doc.rust-lang.org/reference/expressions/return-expr.html
+    | 'return' expression? # RetExpr
     ;
 
 literal_expression:

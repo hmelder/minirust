@@ -5,7 +5,8 @@ import {
     Expression_statementContext,
     Literal_expressionContext,
     BinOpExprContext,
-    ExpressionContext, // Import if needed for type checks/casting
+    ExpressionContext,
+    RetExprContext, // Import if needed for type checks/casting
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -29,8 +30,8 @@ export class MIRLowering
     private createGraph(): MIR.Graph {
         return {
             entryBlockId: 0,
-            blocks: new Map<MIR.BasicBlockId, MIR.BasicBlock>(),
-            locals: new Map<MIR.LocalId, { name?: string }>(),
+            blocks: [],
+            locals: [],
             localCounter: 0, // Start IDs from 0
             blockCounter: 0, // Start IDs from 0
             argCount: 0, // Program entry has no args in this model
@@ -40,7 +41,7 @@ export class MIRLowering
     // Creates a new local variable/temporary and returns its Place
     private newLocal(): MIR.Place {
         const id = this.graph.localCounter++
-        this.graph.locals.set(id, {}) // Store metadata if needed (name, type)
+        this.graph.locals = this.graph.locals.concat({})
         return { kind: 'local', id: id }
     }
 
@@ -53,14 +54,14 @@ export class MIRLowering
             // Default to unreachable until explicitly terminated
             terminator: { kind: 'unreachable' },
         }
-        this.graph.blocks.set(id, block)
+        this.graph.blocks = this.graph.blocks.concat(block)
         return block
     }
 
     // Sets the current block ID we are adding statements/terminator to
     private startBlock(id: MIR.BasicBlockId): void {
         this.currentBlockId = id
-        if (!this.graph.blocks.has(id)) {
+        if (this.graph.blocks.length <= id) {
             // This check is mostly for sanity during development
             throw new Error(`Cannot start non-existent block ${id}`)
         }
@@ -68,10 +69,11 @@ export class MIRLowering
 
     // Gets the actual BasicBlock object for the current ID
     private getCurrentBlock(): MIR.BasicBlock {
-        const block = this.graph.blocks.get(this.currentBlockId)
-        if (!block) {
-            // Should not happen if newBlock/startBlock logic is correct
-            throw new Error(`Current block ${this.currentBlockId} not found.`)
+        const block = this.graph.blocks[this.currentBlockId]
+        if (block === undefined) {
+            throw new Error(
+                `BB${this.currentBlockId} was not found in blocks array`
+            )
         }
         return block
     }
@@ -130,13 +132,9 @@ export class MIRLowering
             }
         }*/
 
-        // After processing all statements, terminate the *last active block*
-        // Since we don't have control flow yet, this will be the entry block
-        // unless a statement somehow created and switched to another block.
-        this.setTerminator({ kind: 'return' }) // End of "main" function
-
         // Optional: Final checks (e.g., ensure all created blocks were terminated)
-        for (const [id, block] of this.graph.blocks) {
+        let id = 0
+        for (const block of this.graph.blocks) {
             if (block.terminator.kind === 'unreachable') {
                 throw new Error(
                     `MIR Generation: Block BB${id} was created but never terminated.`
@@ -144,6 +142,7 @@ export class MIRLowering
                 // As a fallback for the single function model, maybe terminate it?
                 // block.terminator = { kind: 'return' };
             }
+            id += 1
         }
 
         return this.graph
@@ -262,22 +261,18 @@ export class MIRLowering
 
     // Handle the generic ExpressionContext - delegate to specific types
     // This prevents infinite recursion if visit(expression) calls visit(expression)
-    visitExpression(ctx: ExpressionContext): MIR.Operand | undefined {
+    visitExpression(ctx: ExpressionContext) {
         // Check the actual type of the expression context
-        if (ctx instanceof BinOpExprContext) {
-            return this.visitBinOpExpr(ctx)
-        } else if (ctx instanceof Literal_expressionContext) {
-            return this.visitLiteral_expression(ctx)
-        }
-        // Add checks for ParenthesizedExpression, UnaryExpression, etc.
-        // else if (ctx instanceof ParenExprContext) {
-        //     return this.visit(ctx.expression()); // Visit inner expression
-        // }
+        return this.visit(ctx)
+    }
 
-        throw new Error(
-            `Unsupported ExpressionContext type encountered: ${
-                ctx.constructor.name
-            } for text "${ctx.getText()}"`
-        )
+    visitRetExpr(ctx: RetExprContext) {
+        if (ctx.expression() != null) {
+            const val = this.visit(ctx.expression()) as MIR.RValue
+            // TODO: Error checking
+            this.setTerminator({ kind: 'return', rvalue: val })
+        } else {
+            throw new Error('TODO')
+        }
     }
 }
