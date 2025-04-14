@@ -6,7 +6,9 @@ import {
     Literal_expressionContext,
     BinOpExprContext,
     ExpressionContext,
-    RetExprContext, // Import if needed for type checks/casting
+    RetExprContext,
+    Let_statementContext,
+    Path_expressionContext, // Import if needed for type checks/casting
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -118,19 +120,13 @@ export class MIRLowering
 
         // Visit all top-level statements sequentially
         // Each visit call will modify the graph state (add statements/blocks)
-        const stmtCtx = ctx.statement()
-        if (stmtCtx) {
-            this.visit(stmtCtx)
-        }
-
-        /*
         const numStatements = ctx.statement().length // Or determine count differently if needed
         for (let i = 0; i < numStatements; i++) {
             const stmtCtx = ctx.statement(i) // Get individual statement context
             if (stmtCtx) {
                 this.visit(stmtCtx)
             }
-        }*/
+        }
 
         // Optional: Final checks (e.g., ensure all created blocks were terminated)
         let id = 0
@@ -149,14 +145,34 @@ export class MIRLowering
     }
 
     visitStatement(ctx: StatementContext): void {
+        const semi = ctx.SEMI()
+        const letStmtCtx = ctx.let_statement()
         const exprStmtCtx = ctx.expression_statement()
-        // Add checks for other statement types (LetStatement, IfStatement, etc.) here
-        if (exprStmtCtx) {
-            this.visit(exprStmtCtx) // Delegate to specific statement visitor
+        if (semi) {
+            // DO NOTHING
+        } else if (letStmtCtx) {
+            this.visit(letStmtCtx)
+        } else if (exprStmtCtx) {
+            this.visit(exprStmtCtx)
         } else {
             throw new Error(
                 `Unsupported statement type encountered: ${ctx.getText()}`
             )
+        }
+    }
+
+    visitLet_statement(ctx: Let_statementContext): void {
+        const operandExpr = ctx.expression()
+        const identifier = ctx.IDENTIFIER().getText()
+        const operand = this.visit(operandExpr) as MIR.Operand
+
+        // Piggy back onto returned use
+        if (operand.kind === 'use') {
+            const id = operand.place.id
+            this.graph.locals[id].name = identifier
+            return
+        } else {
+            throw new Error(`Invalid operand kind in let statement ${operand}`)
         }
     }
 
@@ -257,6 +273,29 @@ export class MIRLowering
 
         // Return an operand referring to the place storing the literal
         return { kind: 'use', place: place }
+    }
+
+    visitPath_expression(ctx: Path_expressionContext): MIR.Operand {
+        const identifier = ctx.IDENTIFIER().getText()
+
+        // TODO: Hash the identifier instead
+        let i = 0
+        let found = false
+        for (let local of this.graph.locals) {
+            if (local.name && identifier === local.name) {
+                found = true
+                break
+            }
+            i += 1
+        }
+
+        if (!found) {
+            throw new Error(
+                `Cannot resolve identifier '${identifier}' as a local variable`
+            )
+        }
+
+        return { kind: 'use', place: { kind: 'local', id: i } }
     }
 
     // Handle the generic ExpressionContext - delegate to specific types

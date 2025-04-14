@@ -195,4 +195,45 @@ test('MIR Lowering', async (t) => {
             argCount: 0,
         })
     })
+    await t.test('should resolve local variable', () => {
+        assert.deepStrictEqual(lowerProg('let a = 0; return a;'), {
+            argCount: 0,
+            blockCounter: 1,
+            blocks: [
+                {
+                    id: 0,
+                    statements: [
+                        {
+                            kind: 'assign',
+                            place: {
+                                id: 0,
+                                kind: 'local',
+                            },
+                            rvalue: {
+                                kind: 'literal',
+                                value: 0,
+                            },
+                        },
+                    ],
+                    terminator: {
+                        kind: 'return',
+                        rvalue: {
+                            kind: 'use',
+                            place: {
+                                id: 0,
+                                kind: 'local',
+                            },
+                        },
+                    },
+                },
+            ],
+            entryBlockId: 0,
+            localCounter: 1,
+            locals: [
+                {
+                    name: 'a',
+                },
+            ],
+        })
+    })
 })
