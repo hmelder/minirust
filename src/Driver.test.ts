@@ -6,7 +6,7 @@ import { evaluate } from './Driver'
 test('Type Checker Tests', async (t) => {
     await t.test('evalutes simple return expression statement', () => {
         try {
-            const result = evaluate('return 10;')
+            const result = evaluate('fn main() {return 10;}')
             assert.strictEqual(result, 10)
         } catch (e) {
             assert.fail(e)
@@ -16,7 +16,7 @@ test('Type Checker Tests', async (t) => {
         'evalutes simple return expression statement with let statement',
         () => {
             try {
-                const result = evaluate('let a = 42; return a;')
+                const result = evaluate('fn main() {let a = 42; return a;}')
                 assert.strictEqual(result, 42)
             } catch (e) {
                 assert.fail(e)

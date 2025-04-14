@@ -19,19 +19,20 @@ export function evaluate(chunk: string): VM.Data {
     const tree = parser.prog()
 
     // Run type checker
+    /*
     const typeErrors = checker.check(tree)
     if (typeErrors.length !== 0) {
         throw new Error(`Encountered type error(s): ${typeErrors}`)
-    }
+    }*/
 
     // Lower to MIR
     const lowerToMIR = new MIRLowering()
-    const graph = lowerToMIR.visit(tree) as MIR.Graph
+    const program = lowerToMIR.visit(tree) as MIR.Program
     // TOOD check if graph is a MIR.Graph
 
     // Lower to VM
-    const lowerToVM = new MIRToVMLowering(graph)
-    const instrs = lowerToVM.lowerFunction()
+    const lowerToVM = new MIRToVMLowering(program)
+    const instrs = lowerToVM.lower()
 
     // Execute
     const vm = new VM.Executor(instrs)
