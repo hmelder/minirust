@@ -4,14 +4,11 @@ import { AbstractParseTreeVisitor } from "antlr4ng";
 
 
 import { ProgContext } from "./MiniRustParser.js";
-import { ItemContext } from "./MiniRustParser.js";
 import { FunctionContext } from "./MiniRustParser.js";
 import { Function_parametersContext } from "./MiniRustParser.js";
 import { Function_param_patternContext } from "./MiniRustParser.js";
 import { Function_return_typeContext } from "./MiniRustParser.js";
-import { SemiStmtContext } from "./MiniRustParser.js";
-import { LetStmtContext } from "./MiniRustParser.js";
-import { ExprContext } from "./MiniRustParser.js";
+import { StatementContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
@@ -42,12 +39,6 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitProg?: (ctx: ProgContext) => Result;
     /**
-     * Visit a parse tree produced by `MiniRustParser.item`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitItem?: (ctx: ItemContext) => Result;
-    /**
      * Visit a parse tree produced by `MiniRustParser.function`.
      * @param ctx the parse tree
      * @return the visitor result
@@ -72,26 +63,11 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitFunction_return_type?: (ctx: Function_return_typeContext) => Result;
     /**
-     * Visit a parse tree produced by the `SemiStmt`
-     * labeled alternative in `MiniRustParser.statement`.
+     * Visit a parse tree produced by `MiniRustParser.statement`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitSemiStmt?: (ctx: SemiStmtContext) => Result;
-    /**
-     * Visit a parse tree produced by the `LetStmt`
-     * labeled alternative in `MiniRustParser.statement`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitLetStmt?: (ctx: LetStmtContext) => Result;
-    /**
-     * Visit a parse tree produced by the `Expr`
-     * labeled alternative in `MiniRustParser.statement`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitExpr?: (ctx: ExprContext) => Result;
+    visitStatement?: (ctx: StatementContext) => Result;
     /**
      * Visit a parse tree produced by `MiniRustParser.let_statement`.
      * @param ctx the parse tree

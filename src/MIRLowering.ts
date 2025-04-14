@@ -8,7 +8,8 @@ import {
     ExpressionContext,
     RetExprContext,
     Let_statementContext,
-    Path_expressionContext, // Import if needed for type checks/casting
+    Path_expressionContext,
+    FunctionContext, // Import if needed for type checks/casting
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -24,13 +25,22 @@ export class MIRLowering
     implements MiniRustVisitor<unknown>
 {
     // State managed by the visitor
-    private graph!: MIR.Graph // Definite assignment: Initialized in visitProg
+    private program!: MIR.Program // Definite assignment: Initialized in visitProg
+    private currentFunc: MIR.Function // Track the function we're currently inside of
     private currentBlockId!: MIR.BasicBlockId // Tracks the block we're currently adding to
 
     // --- Helper Methods ---
 
-    private createGraph(): MIR.Graph {
+    private createProgram(): MIR.Program {
         return {
+            functions: new Map<MIR.FuncId, MIR.Function>(),
+            entryFunction: 'main', // main is our entry function
+        }
+    }
+
+    private createFunction(name: MIR.FuncId): MIR.Function {
+        return {
+            name: name,
             entryBlockId: 0,
             blocks: [],
             locals: [],
@@ -42,28 +52,28 @@ export class MIRLowering
 
     // Creates a new local variable/temporary and returns its Place
     private newLocal(): MIR.Place {
-        const id = this.graph.localCounter++
-        this.graph.locals = this.graph.locals.concat({})
+        const id = this.currentFunc.localCounter++
+        this.currentFunc.locals = this.currentFunc.locals.concat({})
         return { kind: 'local', id: id }
     }
 
     // Creates a new basic block, adds it to the graph, and returns it
     private newBlock(): MIR.BasicBlock {
-        const id = this.graph.blockCounter++
+        const id = this.currentFunc.blockCounter++
         const block: MIR.BasicBlock = {
             id: id,
             statements: [],
             // Default to unreachable until explicitly terminated
             terminator: { kind: 'unreachable' },
         }
-        this.graph.blocks = this.graph.blocks.concat(block)
+        this.currentFunc.blocks = this.currentFunc.blocks.concat(block)
         return block
     }
 
     // Sets the current block ID we are adding statements/terminator to
     private startBlock(id: MIR.BasicBlockId): void {
         this.currentBlockId = id
-        if (this.graph.blocks.length <= id) {
+        if (this.currentFunc.blocks.length <= id) {
             // This check is mostly for sanity during development
             throw new Error(`Cannot start non-existent block ${id}`)
         }
@@ -71,7 +81,7 @@ export class MIRLowering
 
     // Gets the actual BasicBlock object for the current ID
     private getCurrentBlock(): MIR.BasicBlock {
-        const block = this.graph.blocks[this.currentBlockId]
+        const block = this.currentFunc.blocks[this.currentBlockId]
         if (block === undefined) {
             throw new Error(
                 `BB${this.currentBlockId} was not found in blocks array`
@@ -112,36 +122,50 @@ export class MIRLowering
     // --- Visitor Method Implementations ---
 
     // Entry point: Creates the graph and processes the program
-    visitProg(ctx: ProgContext): MIR.Graph {
-        this.graph = this.createGraph()
-        const entryBlock = this.newBlock() // Create BB0
-        this.graph.entryBlockId = entryBlock.id
-        this.startBlock(entryBlock.id) // Start adding to BB0
+    visitProg(ctx: ProgContext): MIR.Program {
+        this.program = this.createProgram()
 
-        // Visit all top-level statements sequentially
-        // Each visit call will modify the graph state (add statements/blocks)
-        const numStatements = ctx.statement().length // Or determine count differently if needed
-        for (let i = 0; i < numStatements; i++) {
-            const stmtCtx = ctx.statement(i) // Get individual statement context
-            if (stmtCtx) {
-                this.visit(stmtCtx)
+        const numFunctions = ctx.function_().length
+        for (let i = 0; i < numFunctions; i++) {
+            const funcCtx = ctx.function_(i) // Get individual statement context
+            if (funcCtx) {
+                this.visit(funcCtx)
             }
         }
 
-        // Optional: Final checks (e.g., ensure all created blocks were terminated)
-        let id = 0
-        for (const block of this.graph.blocks) {
+        // Check if we have a main function
+        if (!this.program.functions.has('main')) {
+            throw new Error(`Program is missing 'main' function`)
+        }
+
+        return this.program
+    }
+
+    visitFunction(ctx: FunctionContext): void {
+        const name = ctx.IDENTIFIER().getText()
+
+        this.currentFunc = this.createFunction(name)
+        const block = this.newBlock()
+        this.startBlock(block.id)
+
+        // Visit statements
+        const blockExpr = ctx.block_expression()
+        const stmts = blockExpr.statement()
+        for (let stmt of stmts) {
+            this.visit(stmt)
+        }
+
+        // Check if all blocks in the function are terminated
+        for (let block of this.currentFunc.blocks) {
             if (block.terminator.kind === 'unreachable') {
                 throw new Error(
-                    `MIR Generation: Block BB${id} was created but never terminated.`
+                    `Basic block ${block.id} of function ${this.currentFunc.name} is not terminated`
                 )
-                // As a fallback for the single function model, maybe terminate it?
-                // block.terminator = { kind: 'return' };
             }
-            id += 1
         }
 
-        return this.graph
+        // Add function to program
+        this.program.functions.set(name, this.currentFunc)
     }
 
     visitStatement(ctx: StatementContext): void {
@@ -169,7 +193,7 @@ export class MIRLowering
         // Piggy back onto returned use
         if (operand.kind === 'use') {
             const id = operand.place.id
-            this.graph.locals[id].name = identifier
+            this.currentFunc.locals[id].name = identifier
             return
         } else {
             throw new Error(`Invalid operand kind in let statement ${operand}`)
@@ -281,7 +305,7 @@ export class MIRLowering
         // TODO: Hash the identifier instead
         let i = 0
         let found = false
-        for (let local of this.graph.locals) {
+        for (let local of this.currentFunc.locals) {
             if (local.name && identifier === local.name) {
                 found = true
                 break

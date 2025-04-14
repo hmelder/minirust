@@ -8,7 +8,7 @@ import { MIRLowering } from './MIRLowering'
 import { MIR } from './MIR'
 
 // Helper function (same as before)
-function lowerProg(input: string): MIR.Graph {
+function lowerProg(input: string): MIR.Function {
     const inputStream = CharStream.fromString(input)
     const lexer = new MiniRustLexer(inputStream)
     const tokenStream = new CommonTokenStream(lexer)
@@ -17,12 +17,14 @@ function lowerProg(input: string): MIR.Graph {
     const visitor = new MIRLowering()
     const result = visitor.visit(tree)
     // TODO: check result
-    return result as MIR.Graph
+    return result as MIR.Function
 }
 
 test('MIR Lowering', async (t) => {
     await t.test('should lower integer literal', () => {
-        assert.deepStrictEqual(lowerProg('return 42;'), {
+        const funcMap = new Map<MIR.FuncId, MIR.Function>()
+        funcMap.set('main', {
+            name: 'main',
             entryBlockId: 0,
             blocks: [
                 {
@@ -39,8 +41,8 @@ test('MIR Lowering', async (t) => {
                         rvalue: {
                             kind: 'use',
                             place: {
-                                id: 0,
                                 kind: 'local',
+                                id: 0,
                             },
                         },
                     },
@@ -51,67 +53,16 @@ test('MIR Lowering', async (t) => {
             blockCounter: 1,
             argCount: 0,
         })
-    })
-    await t.test('should lower addition', () => {
-        assert.deepStrictEqual(lowerProg('return 2 + 3;'), {
-            entryBlockId: 0,
-            blocks: [
-                {
-                    id: 0,
-                    statements: [
-                        {
-                            kind: 'assign',
-                            place: { kind: 'local', id: 0 },
-                            rvalue: { kind: 'literal', value: 2 },
-                        },
-                        {
-                            kind: 'assign',
-                            place: { kind: 'local', id: 1 },
-                            rvalue: { kind: 'literal', value: 3 },
-                        },
-                        {
-                            kind: 'assign',
-                            place: { kind: 'local', id: 2 },
-                            rvalue: {
-                                kind: 'binOp',
-                                left: {
-                                    kind: 'use',
-                                    place: {
-                                        id: 0,
-                                        kind: 'local',
-                                    },
-                                },
-                                op: 0,
-                                right: {
-                                    kind: 'use',
-                                    place: {
-                                        id: 1,
-                                        kind: 'local',
-                                    },
-                                },
-                            },
-                        },
-                    ],
-                    terminator: {
-                        kind: 'return',
-                        rvalue: {
-                            kind: 'use',
-                            place: {
-                                id: 2,
-                                kind: 'local',
-                            },
-                        },
-                    },
-                },
-            ],
-            locals: [{}, {}, {}],
-            localCounter: 3,
-            blockCounter: 1,
-            argCount: 0,
+
+        assert.deepStrictEqual(lowerProg('fn main() { return 42; }'), {
+            functions: funcMap,
+            entryFunction: 'main',
         })
     })
     await t.test('should lower nested addition', () => {
-        assert.deepStrictEqual(lowerProg('return 1 + 2 + 3;'), {
+        const funcMap = new Map<MIR.FuncId, MIR.Function>()
+        funcMap.set('main', {
+            name: 'main',
             entryBlockId: 0,
             blocks: [
                 {
@@ -194,25 +145,25 @@ test('MIR Lowering', async (t) => {
             blockCounter: 1,
             argCount: 0,
         })
+
+        assert.deepStrictEqual(lowerProg('fn main() { return 1 + 2 + 3; }'), {
+            functions: funcMap,
+            entryFunction: 'main',
+        })
     })
     await t.test('should resolve local variable', () => {
-        assert.deepStrictEqual(lowerProg('let a = 0; return a;'), {
-            argCount: 0,
-            blockCounter: 1,
+        const funcMap = new Map<MIR.FuncId, MIR.Function>()
+        funcMap.set('main', {
+            name: 'main',
+            entryBlockId: 0,
             blocks: [
                 {
                     id: 0,
                     statements: [
                         {
                             kind: 'assign',
-                            place: {
-                                id: 0,
-                                kind: 'local',
-                            },
-                            rvalue: {
-                                kind: 'literal',
-                                value: 0,
-                            },
+                            place: { kind: 'local', id: 0 },
+                            rvalue: { kind: 'literal', value: 0 },
                         },
                     ],
                     terminator: {
@@ -220,20 +171,24 @@ test('MIR Lowering', async (t) => {
                         rvalue: {
                             kind: 'use',
                             place: {
-                                id: 0,
                                 kind: 'local',
+                                id: 0,
                             },
                         },
                     },
                 },
             ],
-            entryBlockId: 0,
+            locals: [{ name: 'a' }],
             localCounter: 1,
-            locals: [
-                {
-                    name: 'a',
-                },
-            ],
+            blockCounter: 1,
+            argCount: 0,
         })
+        assert.deepStrictEqual(
+            lowerProg('fn main() { let a = 0; return a; }'),
+            {
+                functions: funcMap,
+                entryFunction: 'main',
+            }
+        )
     })
 })

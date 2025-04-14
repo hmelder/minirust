@@ -19,9 +19,9 @@ function_return_type:
 
 
 statement
-    : SEMI #SemiStmt
-    | let_statement #LetStmt
-    | expression_statement #Expr
+    : SEMI
+    | let_statement
+    | expression_statement
     ;
 
 // https://doc.rust-lang.org/reference/statements.html#let-statements

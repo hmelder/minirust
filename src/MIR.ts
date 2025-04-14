@@ -2,6 +2,7 @@ export namespace MIR {
     // --- IDs ---
     export type BasicBlockId = number // Simple index is often fine
     export type LocalId = number // Represents local variables, temporaries, args
+    export type FuncId = string // Function identifier (e.g., function name)
 
     // --- Values, Places, Operands ---
 
@@ -38,7 +39,7 @@ export namespace MIR {
     // Represents a computation that produces a value
     export type RValue =
         //| { kind: 'use'; operand: Operand } // Simple move/copy
-        | { kind: 'use'; place: Place } // Simple move/copy
+        | { kind: 'use'; place: Place }
         | { kind: 'binOp'; op: MirBinOp; left: Operand; right: Operand }
         // | { kind: 'unaryOp'; op: MirUnaryOp; operand: Operand } // If needed
         | { kind: 'literal'; value: number /* | string etc */ } // Can sometimes be merged with Operand.literal
@@ -70,13 +71,29 @@ export namespace MIR {
         // predecessors?: BasicBlockId[]; // Optional: Can be computed later
     }
 
-    export interface Graph {
-        // Represents MIR for one function
+    // --- Function MIR (Replaces previous Graph) ---
+    // Represents the MIR for a single function
+    export interface Function {
+        name: FuncId // Name of the function this MIR represents
         entryBlockId: BasicBlockId
         blocks: BasicBlock[]
-        locals: { name?: string /*, type?: MirType */ }[] // Metadata for locals
-        localCounter: number // To generate fresh LocalIds
+        // Metadata for locals. The first `argCount` locals correspond to arguments.
+        locals: {
+            name?: string // Optional debug name from source
+            isArg?: boolean // True if this local holds an argument
+            // type?: MirType; // Optional: type info for the local
+        }[]
+        localCounter: number // To generate fresh LocalIds for temps/vars
         blockCounter: number // To generate fresh BasicBlockIds
         argCount: number // Number of locals that are arguments
+        // Optional: Could designate a specific local for the return value place
+        // returnLocal?: LocalId; // Often LocalId 0 (_0) by convention
+    }
+
+    // --- Program (NEW TOP-LEVEL STRUCTURE) ---
+    // Represents the entire compiled program/crate containing multiple functions
+    export interface Program {
+        functions: Map<FuncId, Function> // Map from function ID/name to its MIR
+        entryFunction: FuncId // The ID of the program's entry point (e.g., "main")
     }
 }

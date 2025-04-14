@@ -4,14 +4,11 @@ import { ErrorNode, ParseTreeListener, ParserRuleContext, TerminalNode } from "a
 
 
 import { ProgContext } from "./MiniRustParser.js";
-import { ItemContext } from "./MiniRustParser.js";
 import { FunctionContext } from "./MiniRustParser.js";
 import { Function_parametersContext } from "./MiniRustParser.js";
 import { Function_param_patternContext } from "./MiniRustParser.js";
 import { Function_return_typeContext } from "./MiniRustParser.js";
-import { SemiStmtContext } from "./MiniRustParser.js";
-import { LetStmtContext } from "./MiniRustParser.js";
-import { ExprContext } from "./MiniRustParser.js";
+import { StatementContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
@@ -42,16 +39,6 @@ export class MiniRustListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitProg?: (ctx: ProgContext) => void;
-    /**
-     * Enter a parse tree produced by `MiniRustParser.item`.
-     * @param ctx the parse tree
-     */
-    enterItem?: (ctx: ItemContext) => void;
-    /**
-     * Exit a parse tree produced by `MiniRustParser.item`.
-     * @param ctx the parse tree
-     */
-    exitItem?: (ctx: ItemContext) => void;
     /**
      * Enter a parse tree produced by `MiniRustParser.function`.
      * @param ctx the parse tree
@@ -93,41 +80,15 @@ export class MiniRustListener implements ParseTreeListener {
      */
     exitFunction_return_type?: (ctx: Function_return_typeContext) => void;
     /**
-     * Enter a parse tree produced by the `SemiStmt`
-     * labeled alternative in `MiniRustParser.statement`.
+     * Enter a parse tree produced by `MiniRustParser.statement`.
      * @param ctx the parse tree
      */
-    enterSemiStmt?: (ctx: SemiStmtContext) => void;
+    enterStatement?: (ctx: StatementContext) => void;
     /**
-     * Exit a parse tree produced by the `SemiStmt`
-     * labeled alternative in `MiniRustParser.statement`.
+     * Exit a parse tree produced by `MiniRustParser.statement`.
      * @param ctx the parse tree
      */
-    exitSemiStmt?: (ctx: SemiStmtContext) => void;
-    /**
-     * Enter a parse tree produced by the `LetStmt`
-     * labeled alternative in `MiniRustParser.statement`.
-     * @param ctx the parse tree
-     */
-    enterLetStmt?: (ctx: LetStmtContext) => void;
-    /**
-     * Exit a parse tree produced by the `LetStmt`
-     * labeled alternative in `MiniRustParser.statement`.
-     * @param ctx the parse tree
-     */
-    exitLetStmt?: (ctx: LetStmtContext) => void;
-    /**
-     * Enter a parse tree produced by the `Expr`
-     * labeled alternative in `MiniRustParser.statement`.
-     * @param ctx the parse tree
-     */
-    enterExpr?: (ctx: ExprContext) => void;
-    /**
-     * Exit a parse tree produced by the `Expr`
-     * labeled alternative in `MiniRustParser.statement`.
-     * @param ctx the parse tree
-     */
-    exitExpr?: (ctx: ExprContext) => void;
+    exitStatement?: (ctx: StatementContext) => void;
     /**
      * Enter a parse tree produced by `MiniRustParser.let_statement`.
      * @param ctx the parse tree
