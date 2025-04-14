@@ -5,12 +5,10 @@ import { evaluate } from './Driver'
 
 export class ConductorBridge extends BasicEvaluator {
     private executionCount: number
-    private visitor: MIRLowering
 
     constructor(conductor: IRunnerPlugin) {
         super(conductor)
         this.executionCount = 0
-        this.visitor = new MIRLowering()
     }
 
     async evaluateChunk(chunk: string): Promise<void> {
