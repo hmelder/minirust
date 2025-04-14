@@ -133,4 +133,4 @@ OCT_DIGIT     : [0-7] ;
 DEC_DIGIT     : [0-9] ;
 HEX_DIGIT     : [0-9a-fA-F] ; // Case-insensitive hex digits
 
-WS: [\t\r\n]+ -> skip;
+WS: [ \t\r\n]+ -> skip;

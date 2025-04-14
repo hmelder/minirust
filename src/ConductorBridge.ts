@@ -5,6 +5,7 @@ import { MiniRustLexer } from './parser/src/MiniRustLexer'
 import { MiniRustParser } from './parser/src/MiniRustParser'
 import { CharStream, CommonTokenStream } from 'antlr4ng'
 
+import { TypeChecker } from './TypeChecker'
 import { MIRLowering } from './MIRLowering'
 import { MIRToVMLowering } from './MIRToVMLowering'
 import { VM } from './VM'
@@ -28,12 +29,18 @@ export class ConductorBridge extends BasicEvaluator {
             const lexer = new MiniRustLexer(inputStream)
             const tokenStream = new CommonTokenStream(lexer)
             const parser = new MiniRustParser(tokenStream)
+            const checker = new TypeChecker()
 
             // Parse the input
             const tree = parser.prog()
 
             // TODO: Check if this actually returns a graph
             const graph = this.visitor.visit(tree) as MIR.Graph
+            const typeErrors = checker.check(graph)
+            if (typeErrors.length !== 0) {
+                throw new Error(`Encountered type error(s): ${typeErrors}`)
+            }
+
             const vmLowering = new MIRToVMLowering(graph)
             const instrs = vmLowering.lowerFunction()
             const vm = new VM.Executor(instrs)
