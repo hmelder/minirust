@@ -2,12 +2,40 @@ import { MIR } from './MIR'
 import { VM } from './VM'
 
 export class MIRToVMLowering {
-    private graph: MIR.Graph
-    private nextLocalId: number
+    private program: MIR.Program
+    private got: Map<MIR.FuncId, number> // global offset table
+    private nextLocalId: VM.LocalId
 
-    constructor(graph: MIR.Graph) {
-        this.graph = graph
-        this.nextLocalId = 0
+    constructor(program: MIR.Program) {
+        this.program = program
+        this.got = new Map<MIR.FuncId, number>()
+    }
+
+    lower(): VM.Instr[] {
+        let instrs: VM.Instr[] = [
+            { opcode: 'CALL', ip: -1 },
+            { opcode: 'HALT' },
+        ]
+        let ip = 2
+
+        this.program.functions.forEach((func) => {
+            this.got.set(func.name, ip)
+            const compiledFunction = this.lowerFunction(func)
+            instrs = instrs.concat(compiledFunction)
+            ip += compiledFunction.length
+        })
+
+        // Get offset of 'main'
+        if (!this.got.has('main')) {
+            throw new Error('Cannot find main function in GOT')
+        }
+
+        const addr = this.got.get('main')
+
+        // Patch call
+        instrs[0] = { opcode: 'CALL', ip: addr }
+
+        return instrs
     }
 
     lowerBasicBlock(block: MIR.BasicBlock): VM.Instr[] {
@@ -24,7 +52,7 @@ export class MIRToVMLowering {
                             opcode: 'ASSIGN',
                             local: this.nextLocalId++,
                             value: stmt.rvalue.value,
-                            type: 'u32',
+                            type: 'i32',
                         })
                         break
                     default:
@@ -61,15 +89,17 @@ export class MIRToVMLowering {
         return instrs
     }
 
-    lowerFunction(): VM.Instr[] {
+    lowerFunction(func: MIR.Function): VM.Instr[] {
         let instrs = new Array<VM.Instr>(0)
+        this.nextLocalId = 0
 
-        const localsCounter = this.graph.localCounter
+        // Create stack frame
+        const localsCounter = func.localCounter
         if (localsCounter !== 0) {
             instrs.push({ opcode: 'ALLOCA', length: localsCounter })
         }
 
-        for (let block of this.graph.blocks) {
+        for (let block of func.blocks) {
             instrs.push(...this.lowerBasicBlock(block))
         }
 

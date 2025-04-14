@@ -7,7 +7,9 @@ import { VM } from './VM'
 
 test('MIR to VM Lowering', async (t) => {
     await t.test('should lower integer literal', () => {
-        const graph: MIR.Graph = {
+        const funcMap = new Map<MIR.FuncId, MIR.Function>()
+        funcMap.set('main', {
+            name: 'main',
             entryBlockId: 0,
             blocks: [
                 {
@@ -24,8 +26,8 @@ test('MIR to VM Lowering', async (t) => {
                         rvalue: {
                             kind: 'use',
                             place: {
-                                id: 0,
                                 kind: 'local',
+                                id: 0,
                             },
                         },
                     },
@@ -35,13 +37,18 @@ test('MIR to VM Lowering', async (t) => {
             localCounter: 1,
             blockCounter: 1,
             argCount: 0,
-        }
+        })
 
-        let exec = new MIRToVMLowering(graph)
-        const actual: VM.Instr[] = exec.lowerFunction()
+        let exec = new MIRToVMLowering({
+            functions: funcMap,
+            entryFunction: 'main',
+        })
+        const actual: VM.Instr[] = exec.lower()
         const expected: VM.Instr[] = [
+            { opcode: 'CALL', ip: 2 },
+            { opcode: 'HALT' },
             { opcode: 'ALLOCA', length: 1 },
-            { opcode: 'ASSIGN', local: 0, value: 42, type: 'u32' },
+            { opcode: 'ASSIGN', local: 0, value: 42, type: 'i32' },
             { opcode: 'PUSH', loc: 0 },
             { opcode: 'RETURN' },
         ]
