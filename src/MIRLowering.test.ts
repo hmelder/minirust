@@ -21,7 +21,7 @@ function lowerProg(input: string): MIR.Function {
 }
 
 test('MIR Lowering', async (t) => {
-    await t.test('should lower integer literal', () => {
+    await t.test('should lower literals', () => {
         const funcMap = new Map<MIR.FuncId, MIR.Function>()
         funcMap.set('main', {
             name: 'main',
@@ -33,6 +33,11 @@ test('MIR Lowering', async (t) => {
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 0 },
+                            rvalue: { kind: 'literal', value: true },
+                        },
+                        {
+                            kind: 'assign',
+                            place: { kind: 'local', id: 1 },
                             rvalue: { kind: 'literal', value: 42 },
                         },
                     ],
@@ -42,22 +47,28 @@ test('MIR Lowering', async (t) => {
                             kind: 'use',
                             place: {
                                 kind: 'local',
-                                id: 0,
+                                id: 1,
                             },
                         },
                     },
                 },
             ],
-            locals: [{ scope: 1 }],
-            localCounter: 1,
+            locals: [
+                { name: 'a', scope: 1, type: 'bool' },
+                { scope: 1, type: 'i32' },
+            ],
+            localCounter: 2,
             blockCounter: 1,
             argCount: 0,
         })
 
-        assert.deepStrictEqual(lowerProg('fn main() { return 42; }'), {
-            functions: funcMap,
-            entryFunction: 'main',
-        })
+        assert.deepStrictEqual(
+            lowerProg('fn main() { let a = true; return 42; }'),
+            {
+                functions: funcMap,
+                entryFunction: 'main',
+            }
+        )
     })
     await t.test('should lower nested addition', () => {
         const funcMap = new Map<MIR.FuncId, MIR.Function>()
@@ -82,7 +93,7 @@ test('MIR Lowering', async (t) => {
                             kind: 'assign',
                             place: { kind: 'local', id: 2 },
                             rvalue: {
-                                kind: 'binOp',
+                                kind: 'arithmeticOp',
                                 left: {
                                     kind: 'use',
                                     place: {
@@ -109,7 +120,7 @@ test('MIR Lowering', async (t) => {
                             kind: 'assign',
                             place: { kind: 'local', id: 4 },
                             rvalue: {
-                                kind: 'binOp',
+                                kind: 'arithmeticOp',
                                 left: {
                                     kind: 'use',
                                     place: {
@@ -141,11 +152,11 @@ test('MIR Lowering', async (t) => {
                 },
             ],
             locals: [
-                { scope: 1 },
-                { scope: 1 },
-                { scope: 1 },
-                { scope: 1 },
-                { scope: 1 },
+                { scope: 1, type: 'i32' },
+                { scope: 1, type: 'i32' },
+                { scope: 1, type: 'i32' },
+                { scope: 1, type: 'i32' },
+                { scope: 1, type: 'i32' },
             ],
             localCounter: 5,
             blockCounter: 1,
@@ -190,8 +201,8 @@ test('MIR Lowering', async (t) => {
                 },
             ],
             locals: [
-                { name: 'a', scope: 1 },
-                { name: 'b', scope: 2 },
+                { name: 'a', scope: 1, type: 'i32' },
+                { name: 'b', scope: 2, type: 'i32' },
             ],
             localCounter: 2,
             blockCounter: 1,

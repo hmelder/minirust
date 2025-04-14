@@ -46,13 +46,18 @@ expression
     | <assoc=left> expression op=AND expression # BinOpExpr
     | <assoc=left> expression op=XOR expression # BinOpExpr
     | <assoc=left> expression op=OR expression # BinOpExpr
+    // Comparison Expression
+    // https://doc.rust-lang.org/reference/expressions/operator-expr.html#comparison-operators
+    | expression op=(EQ | NEQ | LT | GT | LE | GE) expression # CompExpr
     // Return expression
     // https://doc.rust-lang.org/reference/expressions/return-expr.html
     | RETURN expression? # RetExpr
     ;
 
-literal_expression:
-    INTEGER_LITERAL;
+literal_expression
+    : INTEGER_LITERAL #IntLiteral
+    | BOOL_LITERAL #BoolLiteral
+    ;
 
 // Veryyy simplified path expression
 path_expression:
@@ -66,6 +71,7 @@ block_expression:
 type
     : U32
     | I32
+    | BOOL
     ;
 
 // Represents a pattern (simplified to identifier pattern)
@@ -98,6 +104,7 @@ REF    : 'ref';
 MUT    : 'mut';
 U32    : 'u32';
 I32    : 'i32';
+BOOL   : 'bool';
 ARROW  : '->';
 
 // Operators and Parentheses
@@ -111,6 +118,14 @@ OR    : '|';
 XOR   : '^';
 SHL    : '<<';
 SHR    : '>>';
+
+EQ  : '==';
+NEQ: '!=';
+GT: '>';
+LT: '<';
+GE: '>=';
+LE: '<=';
+
 ASSIGN : '=';
 COLON  : ':';
 SEMI : ';';
@@ -120,6 +135,14 @@ LBRACKET : '(';
 RBRACKET : ')';
 LBRACE   : '{';
 RBRACE   : '}';
+
+BOOL_LITERAL
+    : TRUE
+    | FALSE
+    ;
+
+TRUE : 'true';
+FALSE: 'false';
 
 
 // --- Identifier Rules ---

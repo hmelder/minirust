@@ -4,6 +4,8 @@ export namespace MIR {
     export type LocalId = number // Represents local variables, temporaries, args
     export type Scope = number
     export type FuncId = string // Function identifier (e.g., function name)
+    export type Type = 'i32' | 'u32' | 'bool'
+    export type Value = number | boolean
 
     // --- Values, Places, Operands ---
 
@@ -21,29 +23,40 @@ export namespace MIR {
         | { kind: 'use'; place: Place } // Use the value stored in a Place
 
     // Binary operators supported in MIR
-    export enum MirBinOp {
+    export enum ArithmeticOp {
         Add,
         Sub,
         Mul,
-        Div, // Arithmetic
-        /*
+        Div,
+    }
+
+    export enum CompOp {
         Eq,
         Ne,
         Lt,
         Le,
         Gt,
-        Ge, // Comparison
-        // Bitwise, Logical later if needed
-        */
+        Ge,
     }
 
     // Represents a computation that produces a value
     export type RValue =
         //| { kind: 'use'; operand: Operand } // Simple move/copy
         | { kind: 'use'; place: Place }
-        | { kind: 'binOp'; op: MirBinOp; left: Operand; right: Operand }
+        | {
+              kind: 'arithmeticOp'
+              op: ArithmeticOp
+              left: Operand
+              right: Operand
+          }
+        | {
+              kind: 'compOp'
+              op: CompOp
+              left: Operand
+              right: Operand
+          }
         // | { kind: 'unaryOp'; op: MirUnaryOp; operand: Operand } // If needed
-        | { kind: 'literal'; value: number /* | string etc */ } // Can sometimes be merged with Operand.literal
+        | { kind: 'literal'; value: Value }
 
     // --- MIR Statements (Inside Basic Blocks) ---
     export type MirStatement = { kind: 'assign'; place: Place; rvalue: RValue } // The most common statement: place = rvalue
@@ -76,7 +89,7 @@ export namespace MIR {
         name?: string // Optional debug name from source
         isArg?: boolean // True if this local holds an argument
         scope: Scope // Current scope
-        // type?: MirType; // Optional: type info for the local
+        type: Type // Optional: type info for the local
     }
 
     // --- Function MIR (Replaces previous Graph) ---

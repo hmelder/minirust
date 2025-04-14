@@ -17,8 +17,10 @@ import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
 import { RetExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
+import { CompExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
-import { Literal_expressionContext } from "./MiniRustParser.js";
+import { IntLiteralContext } from "./MiniRustParser.js";
+import { BoolLiteralContext } from "./MiniRustParser.js";
 import { Path_expressionContext } from "./MiniRustParser.js";
 import { Block_expressionContext } from "./MiniRustParser.js";
 import { TypeContext } from "./MiniRustParser.js";
@@ -127,6 +129,13 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitBinOpExpr?: (ctx: BinOpExprContext) => Result;
     /**
+     * Visit a parse tree produced by the `CompExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitCompExpr?: (ctx: CompExprContext) => Result;
+    /**
      * Visit a parse tree produced by the `PathExpr`
      * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
@@ -134,11 +143,19 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitPathExpr?: (ctx: PathExprContext) => Result;
     /**
-     * Visit a parse tree produced by `MiniRustParser.literal_expression`.
+     * Visit a parse tree produced by the `IntLiteral`
+     * labeled alternative in `MiniRustParser.literal_expression`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitLiteral_expression?: (ctx: Literal_expressionContext) => Result;
+    visitIntLiteral?: (ctx: IntLiteralContext) => Result;
+    /**
+     * Visit a parse tree produced by the `BoolLiteral`
+     * labeled alternative in `MiniRustParser.literal_expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitBoolLiteral?: (ctx: BoolLiteralContext) => Result;
     /**
      * Visit a parse tree produced by `MiniRustParser.path_expression`.
      * @param ctx the parse tree

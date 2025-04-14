@@ -20,7 +20,7 @@ export namespace VM {
     }
 
     export interface CallInstr {
-        opcode: 'CALL'
+        opcode: 'CALL' | 'THREAD_CREATE'
         ip: number
     }
 

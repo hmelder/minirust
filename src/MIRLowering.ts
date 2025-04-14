@@ -10,7 +10,12 @@ import {
     Let_statementContext,
     Path_expressionContext,
     FunctionContext,
-    BlockStmtContext, // Import if needed for type checks/casting
+    BlockStmtContext,
+    IntLiteralContext,
+    BoolLiteralContext,
+    LiteralExprContext,
+    PathExprContext,
+    LetStmtContext, // Import if needed for type checks/casting
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -53,10 +58,11 @@ export class MIRLowering
     }
 
     // Creates a new local variable/temporary and returns its Place
-    private newLocal(): MIR.Place {
+    private newLocal(type: MIR.Type): MIR.Place {
         const id = this.currentFunc.localCounter++
         this.currentFunc.locals = this.currentFunc.locals.concat({
             scope: this.currentScope,
+            type: type,
         })
         return { kind: 'local', id: id }
     }
@@ -174,15 +180,10 @@ export class MIRLowering
         this.program.functions.set(name, this.currentFunc)
     }
 
-    // Handle the generic ExpressionContext - delegate to specific types
-    // This prevents infinite recursion if visit(expression) calls visit(expression)
-    visitStatement(ctx: ExpressionContext) {
-        return this.visit(ctx)
-    }
-
-    visitLet_statement(ctx: Let_statementContext): void {
-        const operandExpr = ctx.expression()
-        const identifier = ctx.IDENTIFIER().getText()
+    visitLetStmt(ctx: LetStmtContext): void {
+        const innerCtx = ctx.let_statement()
+        const operandExpr = innerCtx.expression()
+        const identifier = innerCtx.IDENTIFIER().getText()
         const operand = this.visit(operandExpr) as MIR.Operand
 
         // Piggy back onto returned use
@@ -203,19 +204,6 @@ export class MIRLowering
         }
 
         this.currentScope -= 1
-    }
-
-    visitExpression_statement(ctx: Expression_statementContext): void {
-        const exprCtx = ctx.expression()
-        if (exprCtx) {
-            // Visit the expression. It will add statements to the current block
-            // and return the Operand where the result is stored.
-            const resultOperand = this.visit(exprCtx) as MIR.Operand | undefined
-
-            // In Rust/MiniRust, the result of an expression statement is typically dropped.
-            // We don't have explicit drops yet, so we just ignore the resultOperand for now.
-            // console.log(`Result of expression statement (operand): ${JSON.stringify(resultOperand)} - Dropped`);
-        }
     }
 
     // Visits a binary operation - returns MIR.Operand representing the result location
@@ -240,22 +228,23 @@ export class MIRLowering
         const rightOperand = this.visit(rightNode) as MIR.Operand
 
         // Create a temporary local to store the result of this operation
-        const resultPlace = this.newLocal()
+        // TODO: change type
+        const resultPlace = this.newLocal('i32')
         const opStr = opNode.getText()
 
-        let mirOp: MIR.MirBinOp
+        let mirOp: MIR.ArithmeticOp
         switch (opStr) {
             case '+':
-                mirOp = MIR.MirBinOp.Add
+                mirOp = MIR.ArithmeticOp.Add
                 break
             case '-':
-                mirOp = MIR.MirBinOp.Sub
+                mirOp = MIR.ArithmeticOp.Sub
                 break
             case '*':
-                mirOp = MIR.MirBinOp.Mul
+                mirOp = MIR.ArithmeticOp.Mul
                 break
             case '/':
-                mirOp = MIR.MirBinOp.Div
+                mirOp = MIR.ArithmeticOp.Div
                 break
             // Add comparison/logical operators when needed
             default:
@@ -264,7 +253,7 @@ export class MIRLowering
 
         // Create the RValue representing the calculation
         const rvalue: MIR.RValue = {
-            kind: 'binOp',
+            kind: 'arithmeticOp',
             op: mirOp,
             left: leftOperand,
             right: rightOperand,
@@ -282,8 +271,7 @@ export class MIRLowering
     }
 
     // Visits a literal expression - returns MIR.Operand representing the literal's location
-    visitLiteral_expression(ctx: Literal_expressionContext): MIR.Operand {
-        // Assuming integer literals for now
+    visitIntLiteral(ctx: IntLiteralContext): MIR.Operand {
         const literalText = ctx.getText()
         const num = parseInt(literalText)
         if (isNaN(num)) {
@@ -294,7 +282,8 @@ export class MIRLowering
         }
 
         // Create a temporary local to store this literal value
-        const place = this.newLocal()
+        // TODO: change type based on literal
+        const place = this.newLocal('i32')
         const rvalue: MIR.RValue = { kind: 'literal', value: num }
 
         // Assign the literal value to the temporary local
@@ -304,8 +293,24 @@ export class MIRLowering
         return { kind: 'use', place: place }
     }
 
-    visitPath_expression(ctx: Path_expressionContext): MIR.Operand {
-        const identifier = ctx.IDENTIFIER().getText()
+    visitBoolLiteral(ctx: BoolLiteralContext): MIR.Operand {
+        const valTest = ctx.BOOL_LITERAL().getText()
+        let val = valTest === 'true'
+        const place = this.newLocal('bool')
+        const rvalue: MIR.RValue = { kind: 'literal', value: val }
+
+        console.warn('visited!!')
+
+        // Assign the literal value to the temporary local
+        this.addStatement({ kind: 'assign', place: place, rvalue: rvalue })
+
+        // Return an operand referring to the place storing the literal
+        return { kind: 'use', place: place }
+    }
+
+    visitPathExpr(ctx: PathExprContext): MIR.Operand {
+        const identifier = ctx.path_expression().IDENTIFIER().getText()
+        console.warn('visited path_expr!')
 
         // TODO: Hash the identifier instead
         // TODO: This breaks variable shadowing
@@ -335,13 +340,6 @@ export class MIRLowering
         }
 
         return { kind: 'use', place: { kind: 'local', id: bestId } }
-    }
-
-    // Handle the generic ExpressionContext - delegate to specific types
-    // This prevents infinite recursion if visit(expression) calls visit(expression)
-    visitExpression(ctx: ExpressionContext) {
-        // Check the actual type of the expression context
-        return this.visit(ctx)
     }
 
     visitRetExpr(ctx: RetExprContext) {

@@ -17,8 +17,10 @@ import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
 import { RetExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
+import { CompExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
-import { Literal_expressionContext } from "./MiniRustParser.js";
+import { IntLiteralContext } from "./MiniRustParser.js";
+import { BoolLiteralContext } from "./MiniRustParser.js";
 import { Path_expressionContext } from "./MiniRustParser.js";
 import { Block_expressionContext } from "./MiniRustParser.js";
 import { TypeContext } from "./MiniRustParser.js";
@@ -187,6 +189,18 @@ export class MiniRustListener implements ParseTreeListener {
      */
     exitBinOpExpr?: (ctx: BinOpExprContext) => void;
     /**
+     * Enter a parse tree produced by the `CompExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterCompExpr?: (ctx: CompExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `CompExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitCompExpr?: (ctx: CompExprContext) => void;
+    /**
      * Enter a parse tree produced by the `PathExpr`
      * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
@@ -199,15 +213,29 @@ export class MiniRustListener implements ParseTreeListener {
      */
     exitPathExpr?: (ctx: PathExprContext) => void;
     /**
-     * Enter a parse tree produced by `MiniRustParser.literal_expression`.
+     * Enter a parse tree produced by the `IntLiteral`
+     * labeled alternative in `MiniRustParser.literal_expression`.
      * @param ctx the parse tree
      */
-    enterLiteral_expression?: (ctx: Literal_expressionContext) => void;
+    enterIntLiteral?: (ctx: IntLiteralContext) => void;
     /**
-     * Exit a parse tree produced by `MiniRustParser.literal_expression`.
+     * Exit a parse tree produced by the `IntLiteral`
+     * labeled alternative in `MiniRustParser.literal_expression`.
      * @param ctx the parse tree
      */
-    exitLiteral_expression?: (ctx: Literal_expressionContext) => void;
+    exitIntLiteral?: (ctx: IntLiteralContext) => void;
+    /**
+     * Enter a parse tree produced by the `BoolLiteral`
+     * labeled alternative in `MiniRustParser.literal_expression`.
+     * @param ctx the parse tree
+     */
+    enterBoolLiteral?: (ctx: BoolLiteralContext) => void;
+    /**
+     * Exit a parse tree produced by the `BoolLiteral`
+     * labeled alternative in `MiniRustParser.literal_expression`.
+     * @param ctx the parse tree
+     */
+    exitBoolLiteral?: (ctx: BoolLiteralContext) => void;
     /**
      * Enter a parse tree produced by `MiniRustParser.path_expression`.
      * @param ctx the parse tree
