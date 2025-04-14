@@ -171,6 +171,11 @@ test('MIR Lowering', async (t) => {
                             place: { kind: 'local', id: 0 },
                             rvalue: { kind: 'literal', value: 0 },
                         },
+                        {
+                            kind: 'assign',
+                            place: { kind: 'local', id: 1 },
+                            rvalue: { kind: 'literal', value: 1 },
+                        },
                     ],
                     terminator: {
                         kind: 'return',
@@ -184,13 +189,16 @@ test('MIR Lowering', async (t) => {
                     },
                 },
             ],
-            locals: [{ name: 'a', scope: 1 }],
-            localCounter: 1,
+            locals: [
+                { name: 'a', scope: 1 },
+                { name: 'b', scope: 2 },
+            ],
+            localCounter: 2,
             blockCounter: 1,
             argCount: 0,
         })
         assert.deepStrictEqual(
-            lowerProg('fn main() { let a = 0; return a; }'),
+            lowerProg('fn main() { let a = 0; { let b = 1; } return a; }'),
             {
                 functions: funcMap,
                 entryFunction: 'main',

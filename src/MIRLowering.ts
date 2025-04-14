@@ -9,7 +9,8 @@ import {
     RetExprContext,
     Let_statementContext,
     Path_expressionContext,
-    FunctionContext, // Import if needed for type checks/casting
+    FunctionContext,
+    BlockStmtContext, // Import if needed for type checks/casting
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -173,21 +174,10 @@ export class MIRLowering
         this.program.functions.set(name, this.currentFunc)
     }
 
-    visitStatement(ctx: StatementContext): void {
-        const semi = ctx.SEMI()
-        const letStmtCtx = ctx.let_statement()
-        const exprStmtCtx = ctx.expression_statement()
-        if (semi) {
-            // DO NOTHING
-        } else if (letStmtCtx) {
-            this.visit(letStmtCtx)
-        } else if (exprStmtCtx) {
-            this.visit(exprStmtCtx)
-        } else {
-            throw new Error(
-                `Unsupported statement type encountered: ${ctx.getText()}`
-            )
-        }
+    // Handle the generic ExpressionContext - delegate to specific types
+    // This prevents infinite recursion if visit(expression) calls visit(expression)
+    visitStatement(ctx: ExpressionContext) {
+        return this.visit(ctx)
     }
 
     visitLet_statement(ctx: Let_statementContext): void {
@@ -203,6 +193,16 @@ export class MIRLowering
         } else {
             throw new Error(`Invalid operand kind in let statement ${operand}`)
         }
+    }
+
+    visitBlockStmt(ctx: BlockStmtContext): void {
+        this.currentScope += 1
+
+        for (let stmt of ctx.statement()) {
+            this.visit(stmt)
+        }
+
+        this.currentScope -= 1
     }
 
     visitExpression_statement(ctx: Expression_statementContext): void {
@@ -308,23 +308,33 @@ export class MIRLowering
         const identifier = ctx.IDENTIFIER().getText()
 
         // TODO: Hash the identifier instead
+        // TODO: This breaks variable shadowing
         let i = 0
-        let found = false
+        let best: MIR.LocalVar
+        let bestId
         for (let local of this.currentFunc.locals) {
-            if (local.name && identifier === local.name) {
-                found = true
-                break
+            if (
+                local.name &&
+                identifier === local.name &&
+                this.currentScope >= local.scope
+            ) {
+                // Found a variable closer to the current scope
+                // This variable shadows the other one
+                if ((best && best.scope < local.scope) || !best) {
+                    best = local
+                    bestId = i
+                }
             }
             i += 1
         }
 
-        if (!found) {
+        if (!best) {
             throw new Error(
                 `Cannot resolve identifier '${identifier}' as a local variable`
             )
         }
 
-        return { kind: 'use', place: { kind: 'local', id: i } }
+        return { kind: 'use', place: { kind: 'local', id: bestId } }
     }
 
     // Handle the generic ExpressionContext - delegate to specific types

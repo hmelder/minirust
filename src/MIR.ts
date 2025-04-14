@@ -72,6 +72,13 @@ export namespace MIR {
         // predecessors?: BasicBlockId[]; // Optional: Can be computed later
     }
 
+    export interface LocalVar {
+        name?: string // Optional debug name from source
+        isArg?: boolean // True if this local holds an argument
+        scope: Scope // Current scope
+        // type?: MirType; // Optional: type info for the local
+    }
+
     // --- Function MIR (Replaces previous Graph) ---
     // Represents the MIR for a single function
     export interface Function {
@@ -79,12 +86,7 @@ export namespace MIR {
         entryBlockId: BasicBlockId
         blocks: BasicBlock[]
         // Metadata for locals. The first `argCount` locals correspond to arguments.
-        locals: {
-            name?: string // Optional debug name from source
-            isArg?: boolean // True if this local holds an argument
-            scope: Scope // Current scope
-            // type?: MirType; // Optional: type info for the local
-        }[]
+        locals: LocalVar[]
         localCounter: number // To generate fresh LocalIds for temps/vars
         blockCounter: number // To generate fresh BasicBlockIds
         argCount: number // Number of locals that are arguments

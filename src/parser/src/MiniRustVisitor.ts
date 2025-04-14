@@ -8,7 +8,10 @@ import { FunctionContext } from "./MiniRustParser.js";
 import { Function_parametersContext } from "./MiniRustParser.js";
 import { Function_param_patternContext } from "./MiniRustParser.js";
 import { Function_return_typeContext } from "./MiniRustParser.js";
-import { StatementContext } from "./MiniRustParser.js";
+import { SemiStmtContext } from "./MiniRustParser.js";
+import { LetStmtContext } from "./MiniRustParser.js";
+import { ExprStmtContext } from "./MiniRustParser.js";
+import { BlockStmtContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
@@ -63,11 +66,33 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitFunction_return_type?: (ctx: Function_return_typeContext) => Result;
     /**
-     * Visit a parse tree produced by `MiniRustParser.statement`.
+     * Visit a parse tree produced by the `SemiStmt`
+     * labeled alternative in `MiniRustParser.statement`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitStatement?: (ctx: StatementContext) => Result;
+    visitSemiStmt?: (ctx: SemiStmtContext) => Result;
+    /**
+     * Visit a parse tree produced by the `LetStmt`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitLetStmt?: (ctx: LetStmtContext) => Result;
+    /**
+     * Visit a parse tree produced by the `ExprStmt`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitExprStmt?: (ctx: ExprStmtContext) => Result;
+    /**
+     * Visit a parse tree produced by the `BlockStmt`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitBlockStmt?: (ctx: BlockStmtContext) => Result;
     /**
      * Visit a parse tree produced by `MiniRustParser.let_statement`.
      * @param ctx the parse tree

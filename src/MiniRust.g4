@@ -19,9 +19,10 @@ function_return_type:
 
 
 statement
-    : SEMI
-    | let_statement
-    | expression_statement
+    : SEMI #SemiStmt
+    | let_statement #LetStmt
+    | expression_statement #ExprStmt
+    | LBRACE statement+ RBRACE #BlockStmt
     ;
 
 // https://doc.rust-lang.org/reference/statements.html#let-statements
