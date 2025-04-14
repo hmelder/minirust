@@ -38,7 +38,7 @@ export class MIRToVMLowering {
         return instrs
     }
 
-    lowerBasicBlock(block: MIR.BasicBlock): VM.Instr[] {
+    private lowerBasicBlock(block: MIR.BasicBlock): VM.Instr[] {
         let instrs = new Array<VM.Instr>(0)
         let stmts = block.statements.reverse()
 
@@ -89,7 +89,7 @@ export class MIRToVMLowering {
         return instrs
     }
 
-    lowerFunction(func: MIR.Function): VM.Instr[] {
+    private lowerFunction(func: MIR.Function): VM.Instr[] {
         let instrs = new Array<VM.Instr>(0)
         this.nextLocalId = 0
 
