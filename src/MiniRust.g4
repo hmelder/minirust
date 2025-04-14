@@ -1,11 +1,27 @@
 grammar MiniRust;
 
-prog: statement+ EOF;
+// Program consists of one or more functions
+prog: function+ EOF;
+
+// https://doc.rust-lang.org/reference/items/functions.html
+// Note: Simplified without function qualifiers, generics, or where clause
+function:
+    FN IDENTIFIER LBRACKET function_parameters? RBRACKET function_return_type? block_expression;
+
+function_parameters:
+    function_param_pattern (COMMA function_param_pattern)*;
+
+function_param_pattern:
+    pattern_no_top_alt COLON type;
+
+function_return_type:
+    ARROW type;
+
 
 statement
-    : SEMI
-    | let_statement
-    | expression_statement
+    : SEMI #SemiStmt
+    | let_statement #LetStmt
+    | expression_statement #Expr
     ;
 
 // https://doc.rust-lang.org/reference/statements.html#let-statements
@@ -41,6 +57,9 @@ literal_expression:
 path_expression:
     IDENTIFIER;
 
+block_expression:
+    LBRACE statement+ RBRACE;
+
 
 // Represents a type annotation (simplified)
 type
@@ -72,11 +91,13 @@ identifier
 
 // --- Keywords (Must be defined BEFORE IDENTIFIER) ---
 LET    : 'let';
+FN     : 'fn';
 RETURN : 'return';
 REF    : 'ref';
 MUT    : 'mut';
 U32    : 'u32';
 I32    : 'i32';
+ARROW  : '->';
 
 // Operators and Parentheses
 ADD    : '+';
@@ -92,6 +113,12 @@ SHR    : '>>';
 ASSIGN : '=';
 COLON  : ':';
 SEMI : ';';
+COMMA : ',';
+
+LBRACKET : '(';
+RBRACKET : ')';
+LBRACE   : '{';
+RBRACE   : '}';
 
 
 // --- Identifier Rules ---
