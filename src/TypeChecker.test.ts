@@ -22,7 +22,7 @@ function typeCheckProg(input: string): [TypeError[], TypeChecker] {
 
 test('Type Checker Tests', async (t) => {
     await t.test('should infer type for let statement', () => {
-        const [errors, visitor] = typeCheckProg('let a = 1;')
+        const [errors, visitor] = typeCheckProg('let a = 1; return a;')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)

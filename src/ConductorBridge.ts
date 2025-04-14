@@ -34,13 +34,13 @@ export class ConductorBridge extends BasicEvaluator {
             // Parse the input
             const tree = parser.prog()
 
-            // TODO: Check if this actually returns a graph
-            const graph = this.visitor.visit(tree) as MIR.Graph
-            const typeErrors = checker.check(graph)
+            const typeErrors = checker.check(tree)
             if (typeErrors.length !== 0) {
                 throw new Error(`Encountered type error(s): ${typeErrors}`)
             }
 
+            // TODO: Check if this actually returns a graph
+            const graph = this.visitor.visit(tree) as MIR.Graph
             const vmLowering = new MIRToVMLowering(graph)
             const instrs = vmLowering.lowerFunction()
             const vm = new VM.Executor(instrs)
