@@ -15,7 +15,8 @@ import {
     BoolLiteralContext,
     LiteralExprContext,
     PathExprContext,
-    LetStmtContext, // Import if needed for type checks/casting
+    LetStmtContext,
+    CompExprContext, // Import if needed for type checks/casting
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -65,6 +66,16 @@ export class MIRLowering
             type: type,
         })
         return { kind: 'local', id: id }
+    }
+
+    private checkType(op: MIR.Operand): MIR.Type {
+        if (op.kind === 'use') {
+            const id = op.place.id
+            const slot = this.currentFunc.locals[id]
+            return slot.type
+        }
+        // TODO: Handle literals
+        throw new Error('unexpected operand')
     }
 
     // Creates a new basic block, adds it to the graph, and returns it
@@ -254,6 +265,83 @@ export class MIRLowering
         // Create the RValue representing the calculation
         const rvalue: MIR.RValue = {
             kind: 'arithmeticOp',
+            op: mirOp,
+            left: leftOperand,
+            right: rightOperand,
+        }
+
+        // Add the assignment statement to the current block
+        this.addStatement({
+            kind: 'assign',
+            place: resultPlace,
+            rvalue: rvalue,
+        })
+
+        // Return an operand that refers to the place where the result is stored
+        return { kind: 'use', place: resultPlace }
+    }
+
+    visitCompExpr(ctx: CompExprContext): MIR.Operand {
+        // Use getChild and cast, or specific accessors if ANTLR generates them
+        const leftNode = ctx.getChild(0)
+        const opNode = ctx.getChild(1)
+        const rightNode = ctx.getChild(2)
+
+        // Basic validation
+        if (
+            !(leftNode instanceof ExpressionContext) ||
+            !(rightNode instanceof ExpressionContext)
+        ) {
+            throw new Error(
+                `Binary operator children are not ExpressionContext: ${ctx.getText()}`
+            )
+        }
+
+        // Check if we are trying to chain compExprs
+        if (
+            leftNode instanceof CompExprContext ||
+            rightNode instanceof CompExprContext
+        ) {
+            throw new Error(
+                `Cannot chain comparison operators: ${ctx.getText()}`
+            )
+        }
+
+        // Recursively visit children to get operands for their results
+        const leftOperand = this.visit(leftNode) as MIR.Operand
+        const rightOperand = this.visit(rightNode) as MIR.Operand
+
+        const resultPlace = this.newLocal('bool')
+        const opStr = opNode.getText()
+
+        let mirOp: MIR.CompOp
+        switch (opStr) {
+            case '==':
+                mirOp = MIR.CompOp.Eq
+                break
+            case '!=':
+                mirOp = MIR.CompOp.Ne
+                break
+            case '<':
+                mirOp = MIR.CompOp.Lt
+                break
+            case '>':
+                mirOp = MIR.CompOp.Gt
+                break
+            case '<=':
+                mirOp = MIR.CompOp.Le
+                break
+            case '>=':
+                mirOp = MIR.CompOp.Ge
+                break
+            // Add comparison/logical operators when needed
+            default:
+                throw new Error(`Unsupported binary operator for MIR: ${opStr}`)
+        }
+
+        // Create the RValue representing the calculation
+        const rvalue: MIR.RValue = {
+            kind: 'compOp',
             op: mirOp,
             left: leftOperand,
             right: rightOperand,

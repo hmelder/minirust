@@ -216,4 +216,84 @@ test('MIR Lowering', async (t) => {
             }
         )
     })
+    await t.test('should resolve comparison operation', () => {
+        const funcMap = new Map<MIR.FuncId, MIR.Function>()
+        funcMap.set('main', {
+            name: 'main',
+            entryBlockId: 0,
+            blocks: [
+                {
+                    id: 0,
+                    statements: [
+                        {
+                            kind: 'assign',
+                            place: { kind: 'local', id: 0 },
+                            rvalue: { kind: 'literal', value: 42 },
+                        },
+                        {
+                            kind: 'assign',
+                            place: { kind: 'local', id: 1 },
+                            rvalue: { kind: 'literal', value: 43 },
+                        },
+                        {
+                            kind: 'assign',
+                            place: {
+                                id: 2,
+                                kind: 'local',
+                            },
+                            rvalue: {
+                                kind: 'compOp',
+                                left: {
+                                    kind: 'use',
+                                    place: {
+                                        id: 0,
+                                        kind: 'local',
+                                    },
+                                },
+                                op: 0,
+                                right: {
+                                    kind: 'use',
+                                    place: {
+                                        id: 1,
+                                        kind: 'local',
+                                    },
+                                },
+                            },
+                        },
+                        {
+                            kind: 'assign',
+                            place: { kind: 'local', id: 3 },
+                            rvalue: { kind: 'literal', value: 0 },
+                        },
+                    ],
+                    terminator: {
+                        kind: 'return',
+                        rvalue: {
+                            kind: 'use',
+                            place: {
+                                kind: 'local',
+                                id: 3,
+                            },
+                        },
+                    },
+                },
+            ],
+            locals: [
+                { scope: 1, type: 'i32' },
+                { scope: 1, type: 'i32' },
+                { name: 'c', scope: 1, type: 'bool' },
+                { scope: 1, type: 'i32' },
+            ],
+            localCounter: 4,
+            blockCounter: 1,
+            argCount: 0,
+        })
+        assert.deepStrictEqual(
+            lowerProg('fn main() { let c = 42 == 43; return 0; }'),
+            {
+                functions: funcMap,
+                entryFunction: 'main',
+            }
+        )
+    })
 })
