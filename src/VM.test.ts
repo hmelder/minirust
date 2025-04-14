@@ -8,7 +8,7 @@ test('VM', async (t) => {
             { opcode: 'ALLOCA', length: 1 },
             { opcode: 'ASSIGN', local: 0, value: 42, type: 'u32' },
             { opcode: 'PUSH', loc: 0 },
-            { opcode: 'RETURN' },
+            { opcode: 'HALT' },
         ]
         let executor = new VM.Executor(instrs)
         const ret = executor.run()
@@ -20,7 +20,7 @@ test('VM', async (t) => {
             { opcode: 'ALLOCA', length: 1 }, // For return value and local
             { opcode: 'ASSIGN', local: 0, value: 42, type: 'u32' },
             { opcode: 'CALL', ip: 5 },
-            { opcode: 'RETURN' },
+            { opcode: 'HALT' },
             { opcode: 'NOP' },
             { opcode: 'NOP' },
             { opcode: 'ALLOCA', length: 1 },

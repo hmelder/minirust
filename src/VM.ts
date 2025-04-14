@@ -6,6 +6,7 @@ export namespace VM {
         | 'PUSH'
         | 'POP'
         | 'CALL'
+        | 'JUMP'
         | 'NOP'
         | 'RETURN'
 
@@ -36,7 +37,7 @@ export namespace VM {
     }
 
     export interface NoArgInstr {
-        opcode: 'NOP' | 'RETURN'
+        opcode: 'NOP' | 'RETURN' | 'HALT'
     }
 
     export type Instr =
@@ -168,13 +169,12 @@ export namespace VM {
             },
             RETURN: (instr: NoArgInstr) => {
                 const frame = this.state.stack.pop()
-                if (frame.returnIp === -1) {
-                    this.state.status = 'halted'
-                    return
-                }
 
                 this.state.sp -= 1
                 this.state.ip = frame.returnIp
+            },
+            HALT: (instr: NoArgInstr) => {
+                this.state.status = 'halted'
             },
         }
 
