@@ -33,7 +33,7 @@ test('MIR to VM Lowering', async (t) => {
                     },
                 },
             ],
-            locals: [{}],
+            locals: [{ scope: 1 }],
             localCounter: 1,
             blockCounter: 1,
             argCount: 0,

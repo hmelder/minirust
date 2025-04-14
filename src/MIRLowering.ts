@@ -28,6 +28,7 @@ export class MIRLowering
     private program!: MIR.Program // Definite assignment: Initialized in visitProg
     private currentFunc: MIR.Function // Track the function we're currently inside of
     private currentBlockId!: MIR.BasicBlockId // Tracks the block we're currently adding to
+    private currentScope: MIR.Scope
 
     // --- Helper Methods ---
 
@@ -53,7 +54,9 @@ export class MIRLowering
     // Creates a new local variable/temporary and returns its Place
     private newLocal(): MIR.Place {
         const id = this.currentFunc.localCounter++
-        this.currentFunc.locals = this.currentFunc.locals.concat({})
+        this.currentFunc.locals = this.currentFunc.locals.concat({
+            scope: this.currentScope,
+        })
         return { kind: 'local', id: id }
     }
 
@@ -124,11 +127,13 @@ export class MIRLowering
     // Entry point: Creates the graph and processes the program
     visitProg(ctx: ProgContext): MIR.Program {
         this.program = this.createProgram()
+        this.currentScope = 0 // Global scope
 
         const numFunctions = ctx.function_().length
         for (let i = 0; i < numFunctions; i++) {
             const funcCtx = ctx.function_(i) // Get individual statement context
             if (funcCtx) {
+                this.currentScope = 1 // Change scope to function-level scope
                 this.visit(funcCtx)
             }
         }

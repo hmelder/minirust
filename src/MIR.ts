@@ -2,6 +2,7 @@ export namespace MIR {
     // --- IDs ---
     export type BasicBlockId = number // Simple index is often fine
     export type LocalId = number // Represents local variables, temporaries, args
+    export type Scope = number
     export type FuncId = string // Function identifier (e.g., function name)
 
     // --- Values, Places, Operands ---
@@ -81,6 +82,7 @@ export namespace MIR {
         locals: {
             name?: string // Optional debug name from source
             isArg?: boolean // True if this local holds an argument
+            scope: Scope // Current scope
             // type?: MirType; // Optional: type info for the local
         }[]
         localCounter: number // To generate fresh LocalIds for temps/vars
