@@ -479,7 +479,7 @@ export class MIRLowering
             op: mirOp,
             left: leftOperand,
             right: rightOperand,
-            type: 'bool',
+            type: 'i32',
         }
 
         // Add the assignment statement to the current block

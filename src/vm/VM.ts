@@ -15,11 +15,7 @@ export namespace VM {
         | 'NOP'
         // Comparison
         | 'EQ'
-        | 'NE'
         | 'LT'
-        | 'GT'
-        | 'LE'
-        | 'GE'
         // Memory Management
         // - Heap
         | 'MALLOC'
@@ -258,102 +254,47 @@ export namespace VM {
         private instructionSet = {
             // Arithmetic operations
             ADD: (instr: NoArgInstr) => {
-                const type = this.state.stack.peekType() // Get type of top value
-                if (type === 'i32') {
-                    const a = this.state.stack.popInt32()
-                    const b = this.state.stack.popInt32()
-                    this.state.stack.pushInt32(a + b)
-                } else if (type === 'u32') {
-                    const a = this.state.stack.popUint32()
-                    const b = this.state.stack.popUint32()
-                    this.state.stack.pushUint32(a + b)
-                }
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                this.state.stack.pushUint32(a + b)
                 this.state.ip += 1
             },
             SUB: (instr: NoArgInstr) => {
-                const type = this.state.stack.peekType()
-                if (type === 'i32') {
-                    const a = this.state.stack.popInt32()
-                    const b = this.state.stack.popInt32()
-                    this.state.stack.pushInt32(b - a)
-                } else if (type === 'u32') {
-                    const a = this.state.stack.popUint32()
-                    const b = this.state.stack.popUint32()
-                    this.state.stack.pushUint32(b - a)
-                }
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                this.state.stack.pushUint32(b - a)
                 this.state.ip += 1
             },
             MUL: (instr: NoArgInstr) => {
-                const type = this.state.stack.peekType()
-                if (type === 'i32') {
-                    const a = this.state.stack.popInt32()
-                    const b = this.state.stack.popInt32()
-                    this.state.stack.pushInt32(a * b)
-                } else if (type === 'u32') {
-                    const a = this.state.stack.popUint32()
-                    const b = this.state.stack.popUint32()
-                    this.state.stack.pushUint32(a * b)
-                }
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                this.state.stack.pushUint32(a * b)
                 this.state.ip += 1
             },
             DIV: (instr: NoArgInstr) => {
-                const type = this.state.stack.peekType()
-                if (type === 'i32') {
-                    const a = this.state.stack.popInt32()
-                    const b = this.state.stack.popInt32()
-                    if (a === 0) {
-                        throw new Error('Division by zero')
-                    }
-                    this.state.stack.pushInt32(Math.floor(b / a))
-                } else if (type === 'u32') {
-                    const a = this.state.stack.popUint32()
-                    const b = this.state.stack.popUint32()
-                    if (a === 0) {
-                        throw new Error('Division by zero')
-                    }
-                    this.state.stack.pushUint32(Math.floor(b / a))
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                if (a === 0) {
+                    throw new Error('Division by zero')
                 }
+                this.state.stack.pushUint32(Math.floor(b / a))
                 this.state.ip += 1
             },
             NOP: (instr: NoArgInstr) => {
                 this.state.ip += 1
             },
 
-            // Comparison operations
+            // --- Comparison Instructions ---
             EQ: (instr: NoArgInstr) => {
                 const a = this.state.stack.popInt32()
                 const b = this.state.stack.popInt32()
                 this.state.stack.pushUint32(this.boolToUint32(a === b))
                 this.state.ip += 1
             },
-            NE: (instr: NoArgInstr) => {
-                const a = this.state.stack.popInt32()
-                const b = this.state.stack.popInt32()
-                this.state.stack.pushUint32(this.boolToUint32(a !== b))
-                this.state.ip += 1
-            },
             LT: (instr: NoArgInstr) => {
                 const a = this.state.stack.popInt32()
                 const b = this.state.stack.popInt32()
-                this.state.stack.pushUint32(this.boolToUint32(b < a))
-                this.state.ip += 1
-            },
-            GT: (instr: NoArgInstr) => {
-                const a = this.state.stack.popInt32()
-                const b = this.state.stack.popInt32()
-                this.state.stack.pushUint32(this.boolToUint32(b > a))
-                this.state.ip += 1
-            },
-            LE: (instr: NoArgInstr) => {
-                const a = this.state.stack.popInt32()
-                const b = this.state.stack.popInt32()
-                this.state.stack.pushUint32(this.boolToUint32(b <= a))
-                this.state.ip += 1
-            },
-            GE: (instr: NoArgInstr) => {
-                const a = this.state.stack.popInt32()
-                const b = this.state.stack.popInt32()
-                this.state.stack.pushUint32(this.boolToUint32(b >= a))
+                this.state.stack.pushUint32(this.boolToUint32(a < b))
                 this.state.ip += 1
             },
 
