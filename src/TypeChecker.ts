@@ -96,23 +96,6 @@ export class TypeChecker
         return PrimitiveType.Unit
     }
 
-    visitStatement(ctx: StatementContext): MiniRustType {
-        // Delegate to the specific statement type
-        if (ctx.let_statement()) {
-            this.visit(ctx.let_statement())
-        } else if (ctx.expression_statement()) {
-            this.visit(ctx.expression_statement())
-        } else if (ctx.SEMI()) {
-            // Empty statement is fine
-        } else {
-            this.addError(
-                'Unsupported statement type encountered during type checking.',
-                ctx
-            )
-        }
-        return PrimitiveType.Unit
-    }
-
     visitLet_statement(ctx: Let_statementContext): MiniRustType {
         const identNode = ctx.IDENTIFIER()
         const identName = identNode?.getText()
