@@ -21,6 +21,7 @@ import {
     CallExprContext,
     Function_param_patternContext,
     Function_parametersContext,
+    PredicateLoopExprContext,
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -61,6 +62,7 @@ export class MIRLowering
             localCounter: 0, // Start IDs from 0
             blockCounter: 0, // Start IDs from 0
             argCount: 0, // Program entry has no args in this model
+            returnType: 'i32',
         }
     }
 
@@ -270,6 +272,53 @@ export class MIRLowering
             condition: predicate,
             trueTarget: cons_bb.id,
             falseTarget: alt_bb.id,
+        }
+
+        // next block
+        const nextBB = this.newBlock()
+        this.startBlock(nextBB.id)
+        this.currentFunc.blocks[nextBB.id].terminator = {
+            kind: 'fallthrough',
+        }
+
+        // TODO: Change to UNIT
+        return { kind: 'literal', value: 0, type: 'i32' }
+    }
+
+    visitPredicateLoopExpr(ctx: PredicateLoopExprContext): MIR.Operand {
+        // 1. Terminate current block with a fallthrough
+        const bb = this.currentBlockId
+        this.currentFunc.blocks[bb].terminator = {
+            kind: 'fallthrough',
+        }
+
+        // 2. Evaluate predicate in new block
+        const predBB = this.newBlock()
+        this.startBlock(predBB.id)
+        const predicateExpr = ctx.expression(0)
+        const predicate = this.visit(predicateExpr)
+
+        // 3. Parse body
+        const body = this.newBlock()
+        this.startBlock(body.id)
+        this.blockHelper(ctx._body_stmts, ctx._body_expr)
+
+        // 4. Patch block terminator
+        this.currentFunc.blocks[this.currentBlockId].terminator = {
+            kind: 'goto',
+            target: predBB.id,
+        }
+
+        // 5. Create new block for next statements
+        const nextBB = this.newBlock()
+        this.startBlock(nextBB.id)
+
+        // 6. Add branch in predicate block
+        this.currentFunc.blocks[predBB.id].terminator = {
+            kind: 'branch',
+            condition: predicate,
+            trueTarget: body.id,
+            falseTarget: nextBB.id,
         }
 
         // TODO: Change to UNIT
