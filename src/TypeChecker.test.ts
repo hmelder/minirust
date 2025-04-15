@@ -29,6 +29,20 @@ test('Type Checker Tests', async (t) => {
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     })
 
+    await t.test('type check let statement', () => {
+        const [errors, visitor] = typeCheckProg('fn main() { let a:i32 = 1; return a; }')
+        const symbolTable = visitor.getSymbolTable()
+        assert.strictEqual(errors.length, 0)
+        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
+    })
+
+    // await t.test('should infer type for let statement', () => {
+    //     const [errors, visitor] = typeCheckProg('fn main() { let a:bool = true; return a; }')
+    //     const symbolTable = visitor.getSymbolTable()
+    //     assert.strictEqual(errors.length, 0)
+    //     assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
+    // })
+
     // await t.test('should infer type for let statement', () => {
     //     const [errors, visitor] = typeCheckProg('fn main() { let a = false; return a; }')
     //     const symbolTable = visitor.getSymbolTable()
@@ -52,6 +66,18 @@ test('Type Checker Tests', async (t) => {
         assert.strictEqual(errors.length, 1); // Ensure one error is reported
         assert.match(errors[0].message, /Mismatched types: expected 'bool', found 'i32'/);
     })
+
+    await t.test('should infer type and perform addition', () => {
+        const [errors, visitor] = typeCheckProg(
+            'fn main() { let a = 1; let b = 2; let c = a + b; }'
+        )
+        const symbolTable = visitor.getSymbolTable()
+        assert.strictEqual(errors.length, 0); // Ensure one error is reported
+        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
+        assert.strictEqual(symbolTable.get('b'), PrimitiveType.I32)
+        assert.strictEqual(symbolTable.get('c'), PrimitiveType.I32)
+    })
+    
 
     await t.test('should infer type for binop statement', () => {
         const [errors, visitor] = typeCheckProg(
@@ -134,9 +160,9 @@ test('Type Checker Tests', async (t) => {
                 if (true) {return 10;}
                 else {return 11;}
             }
-                fn main() {
-                    let result = add(1, 2);
-                }
+            fn main() {
+                let result = add(1, 2);
+            }
         `);
         const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 0); // Ensure one error is reported
