@@ -456,6 +456,7 @@ export class MiniRustParser extends antlr.Parser {
                 this.match(MiniRustParser.WHILE);
                 this.state = 108;
                 this.expression(0);
+                {
                 this.state = 109;
                 this.match(MiniRustParser.LBRACE);
                 this.state = 113;
@@ -466,7 +467,8 @@ export class MiniRustParser extends antlr.Parser {
                         {
                         {
                         this.state = 110;
-                        this.statement();
+                        (localContext as PredicateLoopExprContext)._statement = this.statement();
+                        (localContext as PredicateLoopExprContext)._body_stmts.push((localContext as PredicateLoopExprContext)._statement!);
                         }
                         }
                     }
@@ -480,12 +482,13 @@ export class MiniRustParser extends antlr.Parser {
                 if (((((_la - 37)) & ~0x1F) === 0 && ((1 << (_la - 37)) & 25) !== 0)) {
                     {
                     this.state = 116;
-                    this.expression(0);
+                    (localContext as PredicateLoopExprContext)._body_expr = this.expression(0);
                     }
                 }
 
                 this.state = 119;
                 this.match(MiniRustParser.RBRACE);
+                }
                 }
                 break;
             case MiniRustParser.RETURN:
@@ -1631,6 +1634,9 @@ export class BlockExprContext extends StatementContext {
     }
 }
 export class PredicateLoopExprContext extends StatementContext {
+    public _statement?: StatementContext;
+    public _body_stmts: StatementContext[] = [];
+    public _body_expr?: ExpressionContext;
     public constructor(ctx: StatementContext) {
         super(ctx.parent, ctx.invokingState);
         super.copyFrom(ctx);
@@ -1647,11 +1653,11 @@ export class PredicateLoopExprContext extends StatementContext {
 
         return this.getRuleContext(i, ExpressionContext);
     }
-    public LBRACE(): antlr.TerminalNode {
-        return this.getToken(MiniRustParser.LBRACE, 0)!;
+    public LBRACE(): antlr.TerminalNode | null {
+        return this.getToken(MiniRustParser.LBRACE, 0);
     }
-    public RBRACE(): antlr.TerminalNode {
-        return this.getToken(MiniRustParser.RBRACE, 0)!;
+    public RBRACE(): antlr.TerminalNode | null {
+        return this.getToken(MiniRustParser.RBRACE, 0);
     }
     public statement(): StatementContext[];
     public statement(i: number): StatementContext | null;

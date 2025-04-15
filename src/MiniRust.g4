@@ -27,7 +27,7 @@ statement
     | IF predicate=expression (LBRACE (cons_stmts += statement)* cons_expr=expression? RBRACE)
       ELSE (LBRACE (alt_stmts += statement)* alt_expr=expression? RBRACE) #IfExpr
     // Predicate Loop Expression
-    | WHILE expression LBRACE statement* expression? RBRACE #PredicateLoopExpr
+    | WHILE expression (LBRACE (body_stmts += statement)* body_expr=expression? RBRACE) #PredicateLoopExpr
     | RETURN expression? #RetExpr
     ;
 
