@@ -38,7 +38,7 @@ export class TypeChecker
 
     // --- Entry Point ---
     public check(ctx: ProgContext): TypeError[] {
-        this.visit(ctx)
+        this.visitExpression(ctx)
         return this.errors
     }
 
@@ -130,7 +130,6 @@ export class TypeChecker
     }
 
     visitLet_statement(ctx: Let_statementContext): MiniRustType {
-        
         const identNode = ctx.IDENTIFIER()
         const identName = identNode?.getText()
         
@@ -431,6 +430,8 @@ export class TypeChecker
         // This relies on ANTLR generating distinct context types or labels
         if (ctx instanceof BinOpExprContext) {
             return this.visitBinOpExpr(ctx)
+        } else if (ctx instanceof ProgContext) {
+            return this.visitProg(ctx)
         } else if (ctx instanceof CallExprContext) {
             return this.visitCallExpr(ctx)
         } else if (ctx instanceof LiteralExprContext) {

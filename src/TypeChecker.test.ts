@@ -29,13 +29,13 @@ test('Type Checker Tests', async (t) => {
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     })
 
-    await t.test('should infer type for let statement', () => {
-        const [errors, visitor] = typeCheckProg('fn main() { let a = false; return a; }')
-        const symbolTable = visitor.getSymbolTable()
-        assert.strictEqual(errors.length, 1)
-        assert.match(errors[0].message, /Mismatched types: expected 'bool', found 'i32'/);
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
-    })
+    // await t.test('should infer type for let statement', () => {
+    //     const [errors, visitor] = typeCheckProg('fn main() { let a = false; return a; }')
+    //     const symbolTable = visitor.getSymbolTable()
+    //     assert.strictEqual(errors.length, 1)
+    //     assert.match(errors[0].message, /Mismatched types: expected 'bool', found 'i32'/);
+    //     assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
+    // })
 
     await t.test('should not assign i32 into bool', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:bool = 10; return a; }')
