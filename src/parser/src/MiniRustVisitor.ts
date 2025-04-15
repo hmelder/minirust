@@ -17,6 +17,7 @@ import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
+import { CallExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
 import { CompExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
@@ -129,6 +130,13 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      * @return the visitor result
      */
     visitLiteralExpr?: (ctx: LiteralExprContext) => Result;
+    /**
+     * Visit a parse tree produced by the `CallExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitCallExpr?: (ctx: CallExprContext) => Result;
     /**
      * Visit a parse tree produced by the `BinOpExpr`
      * labeled alternative in `MiniRustParser.expression`.

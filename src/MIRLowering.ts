@@ -18,6 +18,7 @@ import {
     CompExprContext,
     BlockExprContext,
     IfExprContext,
+    CallExprContext,
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -490,6 +491,32 @@ export class MIRLowering
         }
 
         return { kind: 'use', place: { kind: 'local', id: bestId } }
+    }
+
+    visitCallExpr(ctx: CallExprContext): MIR.Operand {
+        const funcId = ctx.path_expression().IDENTIFIER().getText()
+        const argExprs = ctx.expression()
+        let args: MIR.Operand[] = []
+        if (argExprs) {
+            for (let expr of argExprs) {
+                args.push(this.visit(expr))
+            }
+        }
+
+        // FIXME: Change return type
+        const returnPlace = this.newLocal('i32')
+        this.setTerminator({
+            kind: 'call',
+            func: funcId,
+            args: args,
+            returnValue: returnPlace,
+        })
+
+        // Add new basic block
+        const nextBlock = this.newBlock()
+        this.startBlock(nextBlock.id)
+
+        return { kind: 'use', place: returnPlace }
     }
 
     visitRetExpr(ctx: RetExprContext): MIR.Operand {

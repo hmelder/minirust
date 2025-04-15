@@ -296,5 +296,92 @@ test('MIR Lowering', async (t) => {
                 entryFunction: 'main',
             }
         )
-    })
+    }),
+        await t.test('should lower function call', () => {
+            const funcMap = new Map<MIR.FuncId, MIR.Function>()
+
+            // Main Function
+            funcMap.set('main', {
+                name: 'main',
+                entryBlockId: 0,
+                blocks: [
+                    {
+                        id: 0,
+                        statements: [],
+                        terminator: {
+                            kind: 'call',
+                            func: 'test',
+                            args: [],
+                            returnValue: {
+                                kind: 'local',
+                                id: 0,
+                            },
+                        },
+                    },
+                    {
+                        id: 1,
+                        statements: [],
+                        terminator: {
+                            kind: 'return',
+                            rvalue: {
+                                kind: 'use',
+                                place: {
+                                    kind: 'local',
+                                    id: 0,
+                                },
+                            },
+                        },
+                    },
+                ],
+                locals: [{ name: 'a', scope: 1, type: 'i32' }],
+                localCounter: 1,
+                blockCounter: 2,
+                argCount: 0,
+            })
+            // Test Function
+            funcMap.set('test', {
+                name: 'test',
+                entryBlockId: 0,
+                blocks: [
+                    {
+                        id: 0,
+                        statements: [
+                            {
+                                kind: 'assign',
+                                place: { kind: 'local', id: 0 },
+                                rvalue: {
+                                    kind: 'literal',
+                                    value: 42,
+                                    type: 'i32',
+                                },
+                            },
+                        ],
+                        terminator: {
+                            kind: 'return',
+                            rvalue: {
+                                kind: 'use',
+                                place: {
+                                    kind: 'local',
+                                    id: 0,
+                                },
+                            },
+                        },
+                    },
+                ],
+                locals: [{ scope: 1, type: 'i32' }],
+                localCounter: 1,
+                blockCounter: 1,
+                argCount: 0,
+            })
+
+            assert.deepStrictEqual(
+                lowerProg(
+                    'fn test() {return 42;} fn main() { let a = test(); return a; }'
+                ),
+                {
+                    functions: funcMap,
+                    entryFunction: 'main',
+                }
+            )
+        })
 })

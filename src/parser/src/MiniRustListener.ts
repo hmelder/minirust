@@ -17,6 +17,7 @@ import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
+import { CallExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
 import { CompExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
@@ -189,6 +190,18 @@ export class MiniRustListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitLiteralExpr?: (ctx: LiteralExprContext) => void;
+    /**
+     * Enter a parse tree produced by the `CallExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterCallExpr?: (ctx: CallExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `CallExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitCallExpr?: (ctx: CallExprContext) => void;
     /**
      * Enter a parse tree produced by the `BinOpExpr`
      * labeled alternative in `MiniRustParser.expression`.

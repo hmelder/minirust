@@ -13,8 +13,6 @@ export namespace MIR {
     export type Place = {
         kind: 'local'
         id: LocalId
-        // name?: string; // Optional: For debugging/readability
-        // type?: MirType; // Optional: If adding type info to MIR
     }
 
     // Represents a value used in computations (R-value part)
@@ -76,7 +74,12 @@ export namespace MIR {
               falseTarget: BasicBlockId
           } // Conditional branch based on operand value
         | { kind: 'return'; rvalue?: RValue } // Return from the current function
-        // | { kind: 'call'; func: FuncId; args: Operand[]; destination: Place | null; target: BasicBlockId } // Function calls are more complex, add later if needed
+        | {
+              kind: 'call'
+              func: FuncId
+              args: Operand[]
+              returnValue: Place
+          }
         | { kind: 'unreachable' } // Marks blocks that should not be reached
 
     // --- Basic Block & CFG ---
