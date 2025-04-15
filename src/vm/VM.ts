@@ -237,9 +237,9 @@ export namespace VM {
         private instructionSet = {
             // TODO: Make arithmetic and comparison work for values other than i32
             ADD: (instr: NoArgInstr) => {
-                const a = this.state.stack.popUint32()
-                const b = this.state.stack.popUint32()
-                this.state.stack.pushUint32(a + b)
+                const a = this.state.stack.popInt32()
+                const b = this.state.stack.popInt32()
+                this.state.stack.pushInt32(a + b)
                 this.state.ip += 1
             },
 
