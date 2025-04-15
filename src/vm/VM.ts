@@ -9,6 +9,9 @@ export namespace VM {
     export type Op =
         // Arithmetic
         | 'ADD'
+        | 'SUB'
+        | 'MUL'
+        | 'DIV'
         | 'NOP'
         // Comparison
         | 'EQ'
@@ -83,7 +86,7 @@ export namespace VM {
     }
 
     export interface NoArgInstr {
-        opcode: 'NOP' | 'RETURN' | 'HALT' | 'FREE' | 'ADD'
+        opcode: 'NOP' | 'RETURN' | 'HALT' | 'FREE' | 'ADD' | 'SUB' | 'MUL' | 'DIV'
     }
 
     export type Instr =
@@ -235,14 +238,34 @@ export namespace VM {
         }
 
         private instructionSet = {
-            // TODO: Make arithmetic and comparison work for values other than i32
+            // Arithmetic operations
             ADD: (instr: NoArgInstr) => {
                 const a = this.state.stack.popInt32()
                 const b = this.state.stack.popInt32()
                 this.state.stack.pushInt32(a + b)
                 this.state.ip += 1
             },
-
+            SUB: (instr: NoArgInstr) => {
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                this.state.stack.pushUint32(b - a)
+                this.state.ip += 1
+            },
+            MUL: (instr: NoArgInstr) => {
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                this.state.stack.pushUint32(a * b)
+                this.state.ip += 1
+            },
+            DIV: (instr: NoArgInstr) => {
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                if (a === 0) {
+                    throw new Error('Division by zero')
+                }
+                this.state.stack.pushUint32(Math.floor(b / a))
+                this.state.ip += 1
+            },
             NOP: (instr: NoArgInstr) => {
                 this.state.ip += 1
             },
