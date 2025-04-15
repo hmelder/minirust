@@ -53,6 +53,9 @@ expression
     // Comparison Expression
     // https://doc.rust-lang.org/reference/expressions/operator-expr.html#comparison-operators
     | expression op=(EQ | NEQ | LT | GT | LE | GE) expression # CompExpr
+    // Simplified Call Expression
+    // https://doc.rust-lang.org/reference/expressions/call-expr.html
+    | path_expression LBRACKET expression* RBRACKET # CallExpr
     ;
 
 literal_expression
