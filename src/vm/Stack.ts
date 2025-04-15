@@ -118,23 +118,23 @@ export class Stack {
     }
 
     /**
-     * Pushes a Float64 value (8 bytes) onto the stack.
-     * @param value The 64-bit floating point number to push.
+     * Pushes an Int32 value (4 bytes) onto the stack.
+     * @param value The 32-bit signed integer to push.
      */
-    pushFloat64(value: number): void {
-        this.checkSpace(8)
-        this.view.setFloat64(this.sp, value, this.littleEndian)
-        this.sp += 8
+    pushInt32(value: number): void {
+        this.checkSpace(4)
+        this.view.setInt32(this.sp, value, this.littleEndian)
+        this.sp += 4
     }
 
     /**
-     * Pops a Float64 value (8 bytes) from the stack.
-     * @returns The 64-bit floating point number popped.
+     * Pops a Int32 value (4 bytes) from the stack.
+     * @returns The 32-bit signed integer popped.
      */
-    popFloat64(): number {
-        this.checkAvailable(8)
-        this.sp -= 8
-        return this.view.getFloat64(this.sp, this.littleEndian)
+    popInt32(): number {
+        this.checkAvailable(4)
+        this.sp -= 4
+        return this.view.getInt32(this.sp, this.littleEndian)
     }
 
     // --- Raw Memory Access (for use with alloca/free) ---

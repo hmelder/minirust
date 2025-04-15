@@ -1,15 +1,29 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2025 Hugo Melder
+
 import { Stack } from './Stack'
+import { Heap } from './Heap'
 
 export namespace VM {
     // Opcodes remain the same
     export type Op =
+        // Arithmetic
+        | 'ADD'
+        | 'NOP'
+        // Comparison
+        | 'EQ'
+        | 'LT'
+        // Memory Management
         | 'ALLOCA'
+        | 'MALLOC'
+        | 'FREE'
+        | 'MOV'
         | 'ASSIGN'
-        | 'PUSH' // Push local value onto stack top (for arg passing/return)
-        | 'POP' // Pop stack top value into local (for arg receiving/result)
+        | 'PUSH'
+        | 'PUSHA'
+        // Control
         | 'CALL'
         | 'JUMPF' // Implementation TBD/Simplified
-        | 'NOP'
         | 'RETURN'
         | 'HALT' // Added HALT for clarity
 
@@ -17,12 +31,12 @@ export namespace VM {
     // We store raw numbers (interpreted as u32/i32) on the stack
     // Let's simplify Data to just number for stack operations
     export type Data = number
-    export type DataType = 'i32' | 'u32' | 'void' // Type info used by ASSIGN, affects interpretation
+    export type DataType = 'i32' | 'u32' | 'bool' // Type info used by ASSIGN, affects interpretation
+    export type MemoryLocation = 'S' | 'H'
 
-    // Instruction Interfaces (mostly unchanged, Data type updated)
-    export interface AllocaInstr {
-        opcode: 'ALLOCA'
-        length: number // Number of *local variable slots* (each assumed 4 bytes)
+    export interface AllocInstr {
+        opcode: 'ALLOCA' | 'MALLOC'
+        length: number // for malloc in bytes for alloca in words
     }
 
     export interface CallInstr {
@@ -30,28 +44,43 @@ export namespace VM {
         ip: number
     }
 
-    export interface StackOpInstr {
-        opcode: 'PUSH' | 'POP'
-        loc: LocalId
+    export interface MovInstr {
+        opcode: 'MOV'
+        srcOff: number
+        destOff: number
+        type: DataType
+    }
+
+    export interface PushInstr {
+        opcode: 'PUSH'
+        value: Data
+        type: DataType
+    }
+
+    export interface PushAInstr {
+        opcode: 'PUSHA'
+        off: number
+        type: DataType
     }
 
     export interface AssignInstr {
         opcode: 'ASSIGN'
-        local: LocalId
+        off: number
         value: Data
         type: DataType
     }
 
     export interface NoArgInstr {
-        opcode: 'NOP' | 'RETURN' | 'HALT'
+        opcode: 'NOP' | 'RETURN' | 'HALT' | 'FREE' | 'ADD'
     }
 
     export type Instr =
         | AssignInstr
-        | AllocaInstr
+        | AllocInstr
         | CallInstr
         | NoArgInstr
-        | StackOpInstr
+        | PushInstr
+        | MovInstr
 
     /**
      * Encapsulates the entire state of the Virtual Machine using Stack.
@@ -59,8 +88,8 @@ export namespace VM {
     export interface State {
         program: VM.Instr[]
 
-        /** Unified stack for locals, arguments, return addresses, saved FPs */
         stack: Stack
+        heap: Heap
 
         /** Instruction Pointer. Points into `program`. */
         ip: number
@@ -79,9 +108,14 @@ export namespace VM {
         private state: State
         private readonly bytesPerSlot = 4
 
-        constructor(instrs: VM.Instr[], stackCapacity: number = 4 * 1024) {
-            // Default 4KiB stack
+        constructor(
+            instrs: VM.Instr[],
+            stackCapacity: number = 1 * 1024,
+            heapCapacity: number = 8 * 1024
+        ) {
+            // Default 1KiB stack, and 8KiB heap
             const stack = new Stack(stackCapacity)
+            const heap = new Heap(heapCapacity)
 
             // Initial Frame Setup:
             // Simulate a call from native code.
@@ -95,6 +129,7 @@ export namespace VM {
             this.state = {
                 program: instrs,
                 stack: stack,
+                heap: heap,
                 ip: 0,
                 fp: initialFp, // Set initial frame pointer
                 status: 'running',
@@ -109,44 +144,113 @@ export namespace VM {
             return { ...this.state }
         }
 
+        private boolToInt32(b: boolean): number {
+            return b ? 1 : 0
+        }
+
         // --- Getters for local variable offsets ---
         private getLocalOffset(localId: LocalId): number {
             // Locals start *at* the frame pointer address and grow upwards
             return this.state.fp + localId * this.bytesPerSlot
         }
 
+        private push(value: Data, type: DataType) {
+            const stack = this.state.stack
+            switch (type) {
+                case 'i32':
+                    stack.pushInt32(value)
+                    break
+                case 'u32':
+                    stack.pushUint32(value)
+                    break
+                case 'bool':
+                    stack.pushInt32(value)
+                    break
+
+                default:
+                    throw new Error(`Unsupported type ${type} in instruction`)
+                    break
+            }
+        }
+
+        private writeStack(value: Data, type: DataType, off: number) {
+            const stack = this.state.stack
+            const addr = this.getLocalOffset(off)
+            switch (type) {
+                case 'u32':
+                    stack.writeUint32(addr, value)
+                    break
+                default:
+                    throw new Error(`Unsupported type ${type} in instruction`)
+                    break
+            }
+        }
+
+        private readStack(type: DataType, off: number): number {
+            const stack = this.state.stack
+            const addr = this.getLocalOffset(off)
+            switch (type) {
+                case 'u32':
+                    return stack.readUint32(addr)
+                default:
+                    throw new Error(`Unsupported type ${type} in instruction`)
+            }
+        }
+
         private instructionSet = {
+            // TODO: Make arithmetic and comparison work for values other than i32
+            ADD: (instr: NoArgInstr) => {
+                const a = this.state.stack.popUint32()
+                const b = this.state.stack.popUint32()
+                this.state.stack.pushUint32(a + b)
+                this.state.ip += 1
+            },
+
             NOP: (instr: NoArgInstr) => {
                 this.state.ip += 1
             },
-            ALLOCA: (instr: AllocaInstr) => {
-                const bytesToAllocate = instr.length * this.bytesPerSlot
-                // Allocate space above the current stack pointer for locals
-                this.state.stack.alloca(bytesToAllocate)
+
+            // --- Comparison Instructions ---
+            EQ: (instr: NoArgInstr) => {
+                const a = this.state.stack.popInt32()
+                const b = this.state.stack.popInt32()
+                this.state.stack.pushInt32(this.boolToInt32(a === b))
+                this.state.ip += 1
+            },
+            LT: (instr: NoArgInstr) => {
+                const a = this.state.stack.popInt32()
+                const b = this.state.stack.popInt32()
+                this.state.stack.pushInt32(this.boolToInt32(a < b))
+                this.state.ip += 1
+            },
+
+            // --- Stack Manipulation Instructions ---
+
+            ALLOCA: (instr: AllocInstr) => {
+                this.state.stack.alloca(instr.length * this.bytesPerSlot)
                 this.state.ip += 1
             },
             ASSIGN: (instr: AssignInstr) => {
-                const offset = this.getLocalOffset(instr.local)
-                // TODO: Could check instr.type to use different write methods (Int32, Float etc.)
-                this.state.stack.writeUint32(offset, instr.value)
+                this.writeStack(instr.value, instr.type, instr.off)
                 this.state.ip += 1
             },
-            PUSH: (instr: StackOpInstr) => {
-                const offset = this.getLocalOffset(instr.loc)
-                // Read value from local variable
-                const value = this.state.stack.readUint32(offset)
-                // Push it onto the top of the stack (for arg passing/return value)
-                this.state.stack.pushUint32(value)
+            PUSH: (instr: PushInstr) => {
+                this.push(instr.value, instr.type)
                 this.state.ip += 1
             },
-            POP: (instr: StackOpInstr) => {
-                // Pop value from the top of the stack
-                const value = this.state.stack.popUint32()
-                // Write it into the specified local variable
-                const offset = this.getLocalOffset(instr.loc)
-                this.state.stack.writeUint32(offset, value)
+            PUSHA: (instr: PushAInstr) => {
+                const value = this.readStack(instr.type, instr.off)
+                this.push(value, instr.type)
                 this.state.ip += 1
             },
+            MOV: (instr: MovInstr) => {
+                const value = this.readStack(instr.type, instr.srcOff)
+                this.writeStack(value, instr.type, instr.destOff)
+                this.state.ip += 1
+            },
+
+            // --- Control Flow Instructions ---
+
             CALL: (instr: CallInstr) => {
                 const returnIp = this.state.ip + 1
                 const oldFp = this.state.fp
@@ -195,7 +299,7 @@ export namespace VM {
             },
             JUMPF: (instr: CallInstr) => {
                 // Conditional Jump (Example: jump if top of stack is zero/false)
-                const conditionValue = this.state.stack.popUint32()
+                const conditionValue = this.state.stack.popInt32()
                 if (!conditionValue) {
                     this.state.ip = instr.ip // Jump
                 } else {
@@ -204,6 +308,27 @@ export namespace VM {
             },
             HALT: (instr: NoArgInstr) => {
                 this.state.status = 'halted'
+            },
+
+            // --- Heap Manipulation Instructions ---
+
+            // Address to allocated block pushed to stack
+            MALLOC: (instr: AllocInstr) => {
+                const heap = this.state.heap
+                const stack = this.state.stack
+
+                const addr = heap.malloc(instr.length) // potential rt errors handled in instruction execution
+                stack.pushUint32(addr)
+
+                this.state.ip += 1
+            },
+            FREE: (instr: NoArgInstr) => {
+                const heap = this.state.heap
+                const stack = this.state.stack
+
+                const addr = stack.popUint32()
+                heap.free(addr)
+                this.state.ip += 1
             },
         }
 
