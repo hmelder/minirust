@@ -13,6 +13,7 @@ import { LetStmtContext } from "./MiniRustParser.js";
 import { ExprStmtContext } from "./MiniRustParser.js";
 import { BlockExprContext } from "./MiniRustParser.js";
 import { IfExprContext } from "./MiniRustParser.js";
+import { PredicateLoopExprContext } from "./MiniRustParser.js";
 import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
@@ -104,6 +105,13 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      * @return the visitor result
      */
     visitIfExpr?: (ctx: IfExprContext) => Result;
+    /**
+     * Visit a parse tree produced by the `PredicateLoopExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitPredicateLoopExpr?: (ctx: PredicateLoopExprContext) => Result;
     /**
      * Visit a parse tree produced by the `RetExpr`
      * labeled alternative in `MiniRustParser.statement`.

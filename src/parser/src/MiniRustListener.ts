@@ -13,6 +13,7 @@ import { LetStmtContext } from "./MiniRustParser.js";
 import { ExprStmtContext } from "./MiniRustParser.js";
 import { BlockExprContext } from "./MiniRustParser.js";
 import { IfExprContext } from "./MiniRustParser.js";
+import { PredicateLoopExprContext } from "./MiniRustParser.js";
 import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
@@ -146,6 +147,18 @@ export class MiniRustListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitIfExpr?: (ctx: IfExprContext) => void;
+    /**
+     * Enter a parse tree produced by the `PredicateLoopExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     */
+    enterPredicateLoopExpr?: (ctx: PredicateLoopExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `PredicateLoopExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     */
+    exitPredicateLoopExpr?: (ctx: PredicateLoopExprContext) => void;
     /**
      * Enter a parse tree produced by the `RetExpr`
      * labeled alternative in `MiniRustParser.statement`.
