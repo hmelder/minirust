@@ -83,6 +83,8 @@ export class TypeChecker
                 return PrimitiveType.I32
             case 'u32':
                 return PrimitiveType.U32
+            case 'bool':
+                return PrimitiveType.Bool
             default:
                 this.addError(`Unknown type annotation: ${typeText}`, ctx)
                 return PrimitiveType.Error
