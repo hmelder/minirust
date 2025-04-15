@@ -151,6 +151,11 @@ export class Stack {
         return this.view.getUint32(offset, this.littleEndian)
     }
 
+    readInt32(offset: number): number {
+        this.checkBounds(offset, 4)
+        return this.view.getInt32(offset, this.littleEndian)
+    }
+
     /**
      * Writes a Uint32 value to a specific offset.
      * Does NOT modify the stack pointer. Use after `alloca`.
@@ -161,6 +166,11 @@ export class Stack {
     writeUint32(offset: number, value: number): void {
         this.checkBounds(offset, 4)
         this.view.setUint32(offset, value, this.littleEndian)
+    }
+
+    writeInt32(offset: number, value: number): void {
+        this.checkBounds(offset, 4)
+        this.view.setInt32(offset, value, this.littleEndian)
     }
 
     /**

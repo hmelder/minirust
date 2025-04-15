@@ -80,6 +80,7 @@ export namespace VM {
         | CallInstr
         | NoArgInstr
         | PushInstr
+        | PushAInstr
         | MovInstr
 
     /**
@@ -144,7 +145,7 @@ export namespace VM {
             return { ...this.state }
         }
 
-        private boolToInt32(b: boolean): number {
+        private boolToUint32(b: boolean): number {
             return b ? 1 : 0
         }
 
@@ -160,11 +161,9 @@ export namespace VM {
                 case 'i32':
                     stack.pushInt32(value)
                     break
+                case 'bool':
                 case 'u32':
                     stack.pushUint32(value)
-                    break
-                case 'bool':
-                    stack.pushInt32(value)
                     break
 
                 default:
@@ -177,8 +176,12 @@ export namespace VM {
             const stack = this.state.stack
             const addr = this.getLocalOffset(off)
             switch (type) {
+                case 'bool':
                 case 'u32':
                     stack.writeUint32(addr, value)
+                    break
+                case 'i32':
+                    stack.writeInt32(addr, value)
                     break
                 default:
                     throw new Error(`Unsupported type ${type} in instruction`)
@@ -190,8 +193,11 @@ export namespace VM {
             const stack = this.state.stack
             const addr = this.getLocalOffset(off)
             switch (type) {
+                case 'bool':
                 case 'u32':
                     return stack.readUint32(addr)
+                case 'i32':
+                    return stack.readInt32(addr)
                 default:
                     throw new Error(`Unsupported type ${type} in instruction`)
             }
@@ -214,13 +220,13 @@ export namespace VM {
             EQ: (instr: NoArgInstr) => {
                 const a = this.state.stack.popInt32()
                 const b = this.state.stack.popInt32()
-                this.state.stack.pushInt32(this.boolToInt32(a === b))
+                this.state.stack.pushUint32(this.boolToUint32(a === b))
                 this.state.ip += 1
             },
             LT: (instr: NoArgInstr) => {
                 const a = this.state.stack.popInt32()
                 const b = this.state.stack.popInt32()
-                this.state.stack.pushInt32(this.boolToInt32(a < b))
+                this.state.stack.pushUint32(this.boolToUint32(a < b))
                 this.state.ip += 1
             },
 
@@ -353,7 +359,13 @@ export namespace VM {
                 return
             }
 
-            // console.log(`IP=${this.state.ip} FP=${this.state.fp} SP=${this.state.stack.getStackPointer()} INSTR=${instr.opcode}`); // Debug
+            console.warn(
+                `IP=${this.state.ip} FP=${
+                    this.state.fp
+                } SP=${this.state.stack.getStackPointer()} INSTR=${
+                    instr.opcode
+                }`
+            ) // Debug
 
             try {
                 opExecutor(instr as any)
