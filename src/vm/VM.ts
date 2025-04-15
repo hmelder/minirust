@@ -27,6 +27,7 @@ export namespace VM {
         | 'POPA'
         // Control
         | 'CALL'
+        | 'JUMP'
         | 'JUMPF' // Implementation TBD/Simplified
         | 'RETURN'
         | 'HALT' // Added HALT for clarity
@@ -44,7 +45,7 @@ export namespace VM {
     }
 
     export interface CallInstr {
-        opcode: 'CALL' | 'JUMPF'
+        opcode: 'CALL' | 'JUMPF' | 'JUMP'
         ip: number
         patch?: string
     }
@@ -350,6 +351,9 @@ export namespace VM {
                 } else {
                     this.state.ip += 1
                 }
+            },
+            JUMP: (instr: CallInstr) => {
+                this.state.ip = instr.ip // Jump
             },
             HALT: (instr: NoArgInstr) => {
                 this.state.status = 'halted'

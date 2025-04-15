@@ -179,6 +179,13 @@ export class MIRToVMLowering {
                     length: terminator.args.length,
                 })
             }
+        } else if (terminator.kind === 'goto') {
+            const blockId = terminator.target
+            // Patched in lowerFunction
+            this.pushInstr({
+                opcode: 'JUMP',
+                ip: blockId,
+            })
         }
     }
 
@@ -218,7 +225,7 @@ export class MIRToVMLowering {
             this.lowerBasicBlock(func, block)
         }
 
-        // 3. Patch up branches
+        // 3. Patch up jumps
         for (let i = patchStart; i < this.instrs.length; i++) {
             const current = this.instrs[i]
             if (current.opcode === 'JUMPF') {
@@ -226,6 +233,11 @@ export class MIRToVMLowering {
                 const ip = blockDirectory.get(falseId)
 
                 this.instrs[i] = { opcode: 'JUMPF', ip: ip }
+            } else if (current.opcode === 'JUMP') {
+                const id = current.ip
+                const ip = blockDirectory.get(id)
+
+                this.instrs[i] = { opcode: 'JUMP', ip: ip }
             }
         }
     }
