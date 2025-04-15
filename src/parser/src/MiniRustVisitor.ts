@@ -11,11 +11,12 @@ import { Function_return_typeContext } from "./MiniRustParser.js";
 import { SemiStmtContext } from "./MiniRustParser.js";
 import { LetStmtContext } from "./MiniRustParser.js";
 import { ExprStmtContext } from "./MiniRustParser.js";
-import { BlockStmtContext } from "./MiniRustParser.js";
+import { BlockExprContext } from "./MiniRustParser.js";
+import { IfExprContext } from "./MiniRustParser.js";
+import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
-import { RetExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
 import { CompExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
@@ -89,12 +90,26 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitExprStmt?: (ctx: ExprStmtContext) => Result;
     /**
-     * Visit a parse tree produced by the `BlockStmt`
+     * Visit a parse tree produced by the `BlockExpr`
      * labeled alternative in `MiniRustParser.statement`.
      * @param ctx the parse tree
      * @return the visitor result
      */
-    visitBlockStmt?: (ctx: BlockStmtContext) => Result;
+    visitBlockExpr?: (ctx: BlockExprContext) => Result;
+    /**
+     * Visit a parse tree produced by the `IfExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitIfExpr?: (ctx: IfExprContext) => Result;
+    /**
+     * Visit a parse tree produced by the `RetExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitRetExpr?: (ctx: RetExprContext) => Result;
     /**
      * Visit a parse tree produced by `MiniRustParser.let_statement`.
      * @param ctx the parse tree
@@ -114,13 +129,6 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      * @return the visitor result
      */
     visitLiteralExpr?: (ctx: LiteralExprContext) => Result;
-    /**
-     * Visit a parse tree produced by the `RetExpr`
-     * labeled alternative in `MiniRustParser.expression`.
-     * @param ctx the parse tree
-     * @return the visitor result
-     */
-    visitRetExpr?: (ctx: RetExprContext) => Result;
     /**
      * Visit a parse tree produced by the `BinOpExpr`
      * labeled alternative in `MiniRustParser.expression`.

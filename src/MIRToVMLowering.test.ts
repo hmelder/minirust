@@ -3,7 +3,7 @@ import assert from 'node:assert/strict' // Import the assertion module
 
 import { MIRToVMLowering } from './MIRToVMLowering'
 import { MIR } from './MIR'
-import { VM } from './VM'
+import { VM } from './vm/VM'
 
 test('MIR to VM Lowering', async (t) => {
     await t.test('should lower integer literal', () => {
@@ -18,7 +18,7 @@ test('MIR to VM Lowering', async (t) => {
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 0 },
-                            rvalue: { kind: 'literal', value: 42 },
+                            rvalue: { kind: 'literal', value: 42, type: 'u32' },
                         },
                     ],
                     terminator: {
@@ -33,7 +33,7 @@ test('MIR to VM Lowering', async (t) => {
                     },
                 },
             ],
-            locals: [{ scope: 1 }],
+            locals: [{ scope: 1, type: 'u32' }],
             localCounter: 1,
             blockCounter: 1,
             argCount: 0,
@@ -45,11 +45,12 @@ test('MIR to VM Lowering', async (t) => {
         })
         const actual: VM.Instr[] = exec.lower()
         const expected: VM.Instr[] = [
-            { opcode: 'CALL', ip: 2 },
+            { opcode: 'ALLOCA', length: 1 },
+            { opcode: 'CALL', ip: 3 },
             { opcode: 'HALT' },
             { opcode: 'ALLOCA', length: 1 },
-            { opcode: 'ASSIGN', local: 0, value: 42, type: 'i32' },
-            { opcode: 'PUSH', loc: 0 },
+            { opcode: 'ASSIGN', off: 0, value: 42, type: 'u32' },
+            { opcode: 'MOV', srcOff: 0, destOff: -3, type: 'u32' },
             { opcode: 'RETURN' },
         ]
         assert.deepStrictEqual(actual, expected)

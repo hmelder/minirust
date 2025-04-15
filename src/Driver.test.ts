@@ -23,4 +23,24 @@ test('Type Checker Tests', async (t) => {
             }
         }
     )
+    await t.test('evalutes simple branch: true', () => {
+        try {
+            const result = evaluate(
+                'fn main() {if true {return 1;} else {return 0;}}'
+            )
+            assert.strictEqual(result, 1)
+        } catch (e) {
+            assert.fail(e)
+        }
+    })
+    await t.test('evalutes simple branch: false', () => {
+        try {
+            const result = evaluate(
+                'fn main() {if false {return 1;} else {return 0;}}'
+            )
+            assert.strictEqual(result, 0)
+        } catch (e) {
+            assert.fail(e)
+        }
+    })
 })

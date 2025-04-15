@@ -45,20 +45,22 @@ export class MiniRustParser extends antlr.Parser {
     public static readonly RBRACKET = 31;
     public static readonly LBRACE = 32;
     public static readonly RBRACE = 33;
-    public static readonly BOOL_LITERAL = 34;
-    public static readonly TRUE = 35;
-    public static readonly FALSE = 36;
-    public static readonly IDENTIFIER = 37;
-    public static readonly INTEGER_LITERAL = 38;
-    public static readonly DEC_LITERAL = 39;
-    public static readonly BIN_LITERAL = 40;
-    public static readonly OCT_LITERAL = 41;
-    public static readonly HEX_LITERAL = 42;
-    public static readonly BIN_DIGIT = 43;
-    public static readonly OCT_DIGIT = 44;
-    public static readonly DEC_DIGIT = 45;
-    public static readonly HEX_DIGIT = 46;
-    public static readonly WS = 47;
+    public static readonly IF = 34;
+    public static readonly ELSE = 35;
+    public static readonly BOOL_LITERAL = 36;
+    public static readonly TRUE = 37;
+    public static readonly FALSE = 38;
+    public static readonly IDENTIFIER = 39;
+    public static readonly INTEGER_LITERAL = 40;
+    public static readonly DEC_LITERAL = 41;
+    public static readonly BIN_LITERAL = 42;
+    public static readonly OCT_LITERAL = 43;
+    public static readonly HEX_LITERAL = 44;
+    public static readonly BIN_DIGIT = 45;
+    public static readonly OCT_DIGIT = 46;
+    public static readonly DEC_DIGIT = 47;
+    public static readonly HEX_DIGIT = 48;
+    public static readonly WS = 49;
     public static readonly RULE_prog = 0;
     public static readonly RULE_function = 1;
     public static readonly RULE_function_parameters = 2;
@@ -80,18 +82,18 @@ export class MiniRustParser extends antlr.Parser {
         null, "'let'", "'fn'", "'return'", "'ref'", "'mut'", "'u32'", "'i32'", 
         "'bool'", "'->'", "'+'", "'-'", "'*'", "'/'", "'%'", "'&'", "'|'", 
         "'^'", "'<<'", "'>>'", "'=='", "'!='", "'>'", "'<'", "'>='", "'<='", 
-        "'='", "':'", "';'", "','", "'('", "')'", "'{'", "'}'", null, "'true'", 
-        "'false'"
+        "'='", "':'", "';'", "','", "'('", "')'", "'{'", "'}'", "'if'", 
+        "'else'", null, "'true'", "'false'"
     ];
 
     public static readonly symbolicNames = [
         null, "LET", "FN", "RETURN", "REF", "MUT", "U32", "I32", "BOOL", 
         "ARROW", "ADD", "SUB", "MUL", "DIV", "REM", "AND", "OR", "XOR", 
         "SHL", "SHR", "EQ", "NEQ", "GT", "LT", "GE", "LE", "ASSIGN", "COLON", 
-        "SEMI", "COMMA", "LBRACKET", "RBRACKET", "LBRACE", "RBRACE", "BOOL_LITERAL", 
-        "TRUE", "FALSE", "IDENTIFIER", "INTEGER_LITERAL", "DEC_LITERAL", 
-        "BIN_LITERAL", "OCT_LITERAL", "HEX_LITERAL", "BIN_DIGIT", "OCT_DIGIT", 
-        "DEC_DIGIT", "HEX_DIGIT", "WS"
+        "SEMI", "COMMA", "LBRACKET", "RBRACKET", "LBRACE", "RBRACE", "IF", 
+        "ELSE", "BOOL_LITERAL", "TRUE", "FALSE", "IDENTIFIER", "INTEGER_LITERAL", 
+        "DEC_LITERAL", "BIN_LITERAL", "OCT_LITERAL", "HEX_LITERAL", "BIN_DIGIT", 
+        "OCT_DIGIT", "DEC_DIGIT", "HEX_DIGIT", "WS"
     ];
     public static readonly ruleNames = [
         "prog", "function", "function_parameters", "function_param_pattern", 
@@ -168,7 +170,7 @@ export class MiniRustParser extends antlr.Parser {
             this.state = 43;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
-            if (_la === 4 || _la === 5 || _la === 37) {
+            if (_la === 4 || _la === 5 || _la === 39) {
                 {
                 this.state = 42;
                 this.function_parameters();
@@ -301,7 +303,8 @@ export class MiniRustParser extends antlr.Parser {
         this.enterRule(localContext, 10, MiniRustParser.RULE_statement);
         let _la: number;
         try {
-            this.state = 77;
+            let alternative: number;
+            this.state = 111;
             this.errorHandler.sync(this);
             switch (this.tokenStream.LA(1)) {
             case MiniRustParser.SEMI:
@@ -320,7 +323,6 @@ export class MiniRustParser extends antlr.Parser {
                 this.let_statement();
                 }
                 break;
-            case MiniRustParser.RETURN:
             case MiniRustParser.BOOL_LITERAL:
             case MiniRustParser.IDENTIFIER:
             case MiniRustParser.INTEGER_LITERAL:
@@ -332,27 +334,135 @@ export class MiniRustParser extends antlr.Parser {
                 }
                 break;
             case MiniRustParser.LBRACE:
-                localContext = new BlockStmtContext(localContext);
+                localContext = new BlockExprContext(localContext);
                 this.enterOuterAlt(localContext, 4);
                 {
                 this.state = 69;
                 this.match(MiniRustParser.LBRACE);
-                this.state = 71;
+                this.state = 73;
+                this.errorHandler.sync(this);
+                alternative = this.interpreter.adaptivePredict(this.tokenStream, 4, this.context);
+                while (alternative !== 2 && alternative !== antlr.ATN.INVALID_ALT_NUMBER) {
+                    if (alternative === 1) {
+                        {
+                        {
+                        this.state = 70;
+                        this.statement();
+                        }
+                        }
+                    }
+                    this.state = 75;
+                    this.errorHandler.sync(this);
+                    alternative = this.interpreter.adaptivePredict(this.tokenStream, 4, this.context);
+                }
+                this.state = 77;
                 this.errorHandler.sync(this);
                 _la = this.tokenStream.LA(1);
-                do {
+                if (((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & 25) !== 0)) {
                     {
-                    {
-                    this.state = 70;
-                    this.statement();
+                    this.state = 76;
+                    this.expression(0);
                     }
-                    }
-                    this.state = 73;
-                    this.errorHandler.sync(this);
-                    _la = this.tokenStream.LA(1);
-                } while ((((_la) & ~0x1F) === 0 && ((1 << _la) & 268435466) !== 0) || ((((_la - 32)) & ~0x1F) === 0 && ((1 << (_la - 32)) & 101) !== 0));
-                this.state = 75;
+                }
+
+                this.state = 79;
                 this.match(MiniRustParser.RBRACE);
+                }
+                break;
+            case MiniRustParser.IF:
+                localContext = new IfExprContext(localContext);
+                this.enterOuterAlt(localContext, 5);
+                {
+                this.state = 80;
+                this.match(MiniRustParser.IF);
+                this.state = 81;
+                (localContext as IfExprContext)._predicate = this.expression(0);
+                {
+                this.state = 82;
+                this.match(MiniRustParser.LBRACE);
+                this.state = 86;
+                this.errorHandler.sync(this);
+                alternative = this.interpreter.adaptivePredict(this.tokenStream, 6, this.context);
+                while (alternative !== 2 && alternative !== antlr.ATN.INVALID_ALT_NUMBER) {
+                    if (alternative === 1) {
+                        {
+                        {
+                        this.state = 83;
+                        (localContext as IfExprContext)._statement = this.statement();
+                        (localContext as IfExprContext)._cons_stmts.push((localContext as IfExprContext)._statement!);
+                        }
+                        }
+                    }
+                    this.state = 88;
+                    this.errorHandler.sync(this);
+                    alternative = this.interpreter.adaptivePredict(this.tokenStream, 6, this.context);
+                }
+                this.state = 90;
+                this.errorHandler.sync(this);
+                _la = this.tokenStream.LA(1);
+                if (((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & 25) !== 0)) {
+                    {
+                    this.state = 89;
+                    (localContext as IfExprContext)._cons_expr = this.expression(0);
+                    }
+                }
+
+                this.state = 92;
+                this.match(MiniRustParser.RBRACE);
+                }
+                this.state = 94;
+                this.match(MiniRustParser.ELSE);
+                {
+                this.state = 95;
+                this.match(MiniRustParser.LBRACE);
+                this.state = 99;
+                this.errorHandler.sync(this);
+                alternative = this.interpreter.adaptivePredict(this.tokenStream, 8, this.context);
+                while (alternative !== 2 && alternative !== antlr.ATN.INVALID_ALT_NUMBER) {
+                    if (alternative === 1) {
+                        {
+                        {
+                        this.state = 96;
+                        (localContext as IfExprContext)._statement = this.statement();
+                        (localContext as IfExprContext)._alt_stmts.push((localContext as IfExprContext)._statement!);
+                        }
+                        }
+                    }
+                    this.state = 101;
+                    this.errorHandler.sync(this);
+                    alternative = this.interpreter.adaptivePredict(this.tokenStream, 8, this.context);
+                }
+                this.state = 103;
+                this.errorHandler.sync(this);
+                _la = this.tokenStream.LA(1);
+                if (((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & 25) !== 0)) {
+                    {
+                    this.state = 102;
+                    (localContext as IfExprContext)._alt_expr = this.expression(0);
+                    }
+                }
+
+                this.state = 105;
+                this.match(MiniRustParser.RBRACE);
+                }
+                }
+                break;
+            case MiniRustParser.RETURN:
+                localContext = new RetExprContext(localContext);
+                this.enterOuterAlt(localContext, 6);
+                {
+                this.state = 107;
+                this.match(MiniRustParser.RETURN);
+                this.state = 109;
+                this.errorHandler.sync(this);
+                switch (this.interpreter.adaptivePredict(this.tokenStream, 10, this.context) ) {
+                case 1:
+                    {
+                    this.state = 108;
+                    this.expression(0);
+                    }
+                    break;
+                }
                 }
                 break;
             default:
@@ -379,30 +489,30 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 79;
+            this.state = 113;
             this.match(MiniRustParser.LET);
-            this.state = 80;
+            this.state = 114;
             this.match(MiniRustParser.IDENTIFIER);
-            this.state = 83;
+            this.state = 117;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
             if (_la === 27) {
                 {
-                this.state = 81;
+                this.state = 115;
                 this.match(MiniRustParser.COLON);
-                this.state = 82;
+                this.state = 116;
                 this.type_();
                 }
             }
 
-            this.state = 87;
+            this.state = 121;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
             if (_la === 26) {
                 {
-                this.state = 85;
+                this.state = 119;
                 this.match(MiniRustParser.ASSIGN);
-                this.state = 86;
+                this.state = 120;
                 this.expression(0);
                 }
             }
@@ -428,9 +538,9 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 89;
+            this.state = 123;
             this.expression(0);
-            this.state = 90;
+            this.state = 124;
             this.match(MiniRustParser.SEMI);
             }
         }
@@ -466,7 +576,7 @@ export class MiniRustParser extends antlr.Parser {
             let alternative: number;
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 99;
+            this.state = 129;
             this.errorHandler.sync(this);
             switch (this.tokenStream.LA(1)) {
             case MiniRustParser.BOOL_LITERAL:
@@ -476,7 +586,7 @@ export class MiniRustParser extends antlr.Parser {
                 this.context = localContext;
                 previousContext = localContext;
 
-                this.state = 93;
+                this.state = 127;
                 this.literal_expression();
                 }
                 break;
@@ -485,36 +595,17 @@ export class MiniRustParser extends antlr.Parser {
                 localContext = new PathExprContext(localContext);
                 this.context = localContext;
                 previousContext = localContext;
-                this.state = 94;
+                this.state = 128;
                 this.path_expression();
-                }
-                break;
-            case MiniRustParser.RETURN:
-                {
-                localContext = new RetExprContext(localContext);
-                this.context = localContext;
-                previousContext = localContext;
-                this.state = 95;
-                this.match(MiniRustParser.RETURN);
-                this.state = 97;
-                this.errorHandler.sync(this);
-                switch (this.interpreter.adaptivePredict(this.tokenStream, 8, this.context) ) {
-                case 1:
-                    {
-                    this.state = 96;
-                    this.expression(0);
-                    }
-                    break;
-                }
                 }
                 break;
             default:
                 throw new antlr.NoViableAltException(this);
             }
             this.context!.stop = this.tokenStream.LT(-1);
-            this.state = 124;
+            this.state = 154;
             this.errorHandler.sync(this);
-            alternative = this.interpreter.adaptivePredict(this.tokenStream, 11, this.context);
+            alternative = this.interpreter.adaptivePredict(this.tokenStream, 16, this.context);
             while (alternative !== 2 && alternative !== antlr.ATN.INVALID_ALT_NUMBER) {
                 if (alternative === 1) {
                     if (this.parseListeners != null) {
@@ -522,18 +613,18 @@ export class MiniRustParser extends antlr.Parser {
                     }
                     previousContext = localContext;
                     {
-                    this.state = 122;
+                    this.state = 152;
                     this.errorHandler.sync(this);
-                    switch (this.interpreter.adaptivePredict(this.tokenStream, 10, this.context) ) {
+                    switch (this.interpreter.adaptivePredict(this.tokenStream, 15, this.context) ) {
                     case 1:
                         {
                         localContext = new BinOpExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 101;
-                        if (!(this.precpred(this.context, 8))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 8)");
+                        this.state = 131;
+                        if (!(this.precpred(this.context, 7))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 7)");
                         }
-                        this.state = 102;
+                        this.state = 132;
                         (localContext as BinOpExprContext)._op = this.tokenStream.LT(1);
                         _la = this.tokenStream.LA(1);
                         if(!((((_la) & ~0x1F) === 0 && ((1 << _la) & 28672) !== 0))) {
@@ -543,19 +634,19 @@ export class MiniRustParser extends antlr.Parser {
                             this.errorHandler.reportMatch(this);
                             this.consume();
                         }
-                        this.state = 103;
-                        this.expression(9);
+                        this.state = 133;
+                        this.expression(8);
                         }
                         break;
                     case 2:
                         {
                         localContext = new BinOpExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 104;
-                        if (!(this.precpred(this.context, 7))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 7)");
+                        this.state = 134;
+                        if (!(this.precpred(this.context, 6))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 6)");
                         }
-                        this.state = 105;
+                        this.state = 135;
                         (localContext as BinOpExprContext)._op = this.tokenStream.LT(1);
                         _la = this.tokenStream.LA(1);
                         if(!(_la === 10 || _la === 11)) {
@@ -565,19 +656,19 @@ export class MiniRustParser extends antlr.Parser {
                             this.errorHandler.reportMatch(this);
                             this.consume();
                         }
-                        this.state = 106;
-                        this.expression(8);
+                        this.state = 136;
+                        this.expression(7);
                         }
                         break;
                     case 3:
                         {
                         localContext = new BinOpExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 107;
-                        if (!(this.precpred(this.context, 6))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 6)");
+                        this.state = 137;
+                        if (!(this.precpred(this.context, 5))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 5)");
                         }
-                        this.state = 108;
+                        this.state = 138;
                         (localContext as BinOpExprContext)._op = this.tokenStream.LT(1);
                         _la = this.tokenStream.LA(1);
                         if(!(_la === 18 || _la === 19)) {
@@ -587,61 +678,61 @@ export class MiniRustParser extends antlr.Parser {
                             this.errorHandler.reportMatch(this);
                             this.consume();
                         }
-                        this.state = 109;
-                        this.expression(7);
+                        this.state = 139;
+                        this.expression(6);
                         }
                         break;
                     case 4:
                         {
                         localContext = new BinOpExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 110;
-                        if (!(this.precpred(this.context, 5))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 5)");
+                        this.state = 140;
+                        if (!(this.precpred(this.context, 4))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 4)");
                         }
-                        this.state = 111;
+                        this.state = 141;
                         (localContext as BinOpExprContext)._op = this.match(MiniRustParser.AND);
-                        this.state = 112;
-                        this.expression(6);
+                        this.state = 142;
+                        this.expression(5);
                         }
                         break;
                     case 5:
                         {
                         localContext = new BinOpExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 113;
-                        if (!(this.precpred(this.context, 4))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 4)");
+                        this.state = 143;
+                        if (!(this.precpred(this.context, 3))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 3)");
                         }
-                        this.state = 114;
+                        this.state = 144;
                         (localContext as BinOpExprContext)._op = this.match(MiniRustParser.XOR);
-                        this.state = 115;
-                        this.expression(5);
+                        this.state = 145;
+                        this.expression(4);
                         }
                         break;
                     case 6:
                         {
                         localContext = new BinOpExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 116;
-                        if (!(this.precpred(this.context, 3))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 3)");
+                        this.state = 146;
+                        if (!(this.precpred(this.context, 2))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 2)");
                         }
-                        this.state = 117;
+                        this.state = 147;
                         (localContext as BinOpExprContext)._op = this.match(MiniRustParser.OR);
-                        this.state = 118;
-                        this.expression(4);
+                        this.state = 148;
+                        this.expression(3);
                         }
                         break;
                     case 7:
                         {
                         localContext = new CompExprContext(new ExpressionContext(parentContext, parentState));
                         this.pushNewRecursionContext(localContext, _startState, MiniRustParser.RULE_expression);
-                        this.state = 119;
-                        if (!(this.precpred(this.context, 2))) {
-                            throw this.createFailedPredicateException("this.precpred(this.context, 2)");
+                        this.state = 149;
+                        if (!(this.precpred(this.context, 1))) {
+                            throw this.createFailedPredicateException("this.precpred(this.context, 1)");
                         }
-                        this.state = 120;
+                        this.state = 150;
                         (localContext as CompExprContext)._op = this.tokenStream.LT(1);
                         _la = this.tokenStream.LA(1);
                         if(!((((_la) & ~0x1F) === 0 && ((1 << _la) & 66060288) !== 0))) {
@@ -651,16 +742,16 @@ export class MiniRustParser extends antlr.Parser {
                             this.errorHandler.reportMatch(this);
                             this.consume();
                         }
-                        this.state = 121;
-                        this.expression(3);
+                        this.state = 151;
+                        this.expression(2);
                         }
                         break;
                     }
                     }
                 }
-                this.state = 126;
+                this.state = 156;
                 this.errorHandler.sync(this);
-                alternative = this.interpreter.adaptivePredict(this.tokenStream, 11, this.context);
+                alternative = this.interpreter.adaptivePredict(this.tokenStream, 16, this.context);
             }
             }
         }
@@ -681,14 +772,14 @@ export class MiniRustParser extends antlr.Parser {
         let localContext = new Literal_expressionContext(this.context, this.state);
         this.enterRule(localContext, 18, MiniRustParser.RULE_literal_expression);
         try {
-            this.state = 129;
+            this.state = 159;
             this.errorHandler.sync(this);
             switch (this.tokenStream.LA(1)) {
             case MiniRustParser.INTEGER_LITERAL:
                 localContext = new IntLiteralContext(localContext);
                 this.enterOuterAlt(localContext, 1);
                 {
-                this.state = 127;
+                this.state = 157;
                 this.match(MiniRustParser.INTEGER_LITERAL);
                 }
                 break;
@@ -696,7 +787,7 @@ export class MiniRustParser extends antlr.Parser {
                 localContext = new BoolLiteralContext(localContext);
                 this.enterOuterAlt(localContext, 2);
                 {
-                this.state = 128;
+                this.state = 158;
                 this.match(MiniRustParser.BOOL_LITERAL);
                 }
                 break;
@@ -723,7 +814,7 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 131;
+            this.state = 161;
             this.match(MiniRustParser.IDENTIFIER);
             }
         }
@@ -745,25 +836,42 @@ export class MiniRustParser extends antlr.Parser {
         this.enterRule(localContext, 22, MiniRustParser.RULE_block_expression);
         let _la: number;
         try {
+            let alternative: number;
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 133;
+            this.state = 163;
             this.match(MiniRustParser.LBRACE);
-            this.state = 135;
+            this.state = 165;
+            this.errorHandler.sync(this);
+            alternative = 1;
+            do {
+                switch (alternative) {
+                case 1:
+                    {
+                    {
+                    this.state = 164;
+                    this.statement();
+                    }
+                    }
+                    break;
+                default:
+                    throw new antlr.NoViableAltException(this);
+                }
+                this.state = 167;
+                this.errorHandler.sync(this);
+                alternative = this.interpreter.adaptivePredict(this.tokenStream, 18, this.context);
+            } while (alternative !== 2 && alternative !== antlr.ATN.INVALID_ALT_NUMBER);
+            this.state = 170;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
-            do {
+            if (((((_la - 36)) & ~0x1F) === 0 && ((1 << (_la - 36)) & 25) !== 0)) {
                 {
-                {
-                this.state = 134;
-                this.statement();
+                this.state = 169;
+                this.expression(0);
                 }
-                }
-                this.state = 137;
-                this.errorHandler.sync(this);
-                _la = this.tokenStream.LA(1);
-            } while ((((_la) & ~0x1F) === 0 && ((1 << _la) & 268435466) !== 0) || ((((_la - 32)) & ~0x1F) === 0 && ((1 << (_la - 32)) & 101) !== 0));
-            this.state = 139;
+            }
+
+            this.state = 172;
             this.match(MiniRustParser.RBRACE);
             }
         }
@@ -787,7 +895,7 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 141;
+            this.state = 174;
             _la = this.tokenStream.LA(1);
             if(!((((_la) & ~0x1F) === 0 && ((1 << _la) & 448) !== 0))) {
             this.errorHandler.recoverInline(this);
@@ -817,7 +925,7 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 143;
+            this.state = 176;
             this.identifier_pattern();
             }
         }
@@ -841,27 +949,27 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 146;
+            this.state = 179;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
             if (_la === 4) {
                 {
-                this.state = 145;
+                this.state = 178;
                 this.match(MiniRustParser.REF);
                 }
             }
 
-            this.state = 149;
+            this.state = 182;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
             if (_la === 5) {
                 {
-                this.state = 148;
+                this.state = 181;
                 this.match(MiniRustParser.MUT);
                 }
             }
 
-            this.state = 151;
+            this.state = 184;
             this.identifier();
             }
         }
@@ -884,7 +992,7 @@ export class MiniRustParser extends antlr.Parser {
         try {
             this.enterOuterAlt(localContext, 1);
             {
-            this.state = 153;
+            this.state = 186;
             this.match(MiniRustParser.IDENTIFIER);
             }
         }
@@ -912,77 +1020,90 @@ export class MiniRustParser extends antlr.Parser {
     private expression_sempred(localContext: ExpressionContext | null, predIndex: number): boolean {
         switch (predIndex) {
         case 0:
-            return this.precpred(this.context, 8);
-        case 1:
             return this.precpred(this.context, 7);
-        case 2:
+        case 1:
             return this.precpred(this.context, 6);
-        case 3:
+        case 2:
             return this.precpred(this.context, 5);
-        case 4:
+        case 3:
             return this.precpred(this.context, 4);
-        case 5:
+        case 4:
             return this.precpred(this.context, 3);
-        case 6:
+        case 5:
             return this.precpred(this.context, 2);
+        case 6:
+            return this.precpred(this.context, 1);
         }
         return true;
     }
 
     public static readonly _serializedATN: number[] = [
-        4,1,47,156,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,
+        4,1,49,189,2,0,7,0,2,1,7,1,2,2,7,2,2,3,7,3,2,4,7,4,2,5,7,5,2,6,7,
         6,2,7,7,7,2,8,7,8,2,9,7,9,2,10,7,10,2,11,7,11,2,12,7,12,2,13,7,13,
         2,14,7,14,2,15,7,15,1,0,4,0,34,8,0,11,0,12,0,35,1,0,1,0,1,1,1,1,
         1,1,1,1,3,1,44,8,1,1,1,1,1,3,1,48,8,1,1,1,1,1,1,2,1,2,1,2,5,2,55,
         8,2,10,2,12,2,58,9,2,1,3,1,3,1,3,1,3,1,4,1,4,1,4,1,5,1,5,1,5,1,5,
-        1,5,4,5,72,8,5,11,5,12,5,73,1,5,1,5,3,5,78,8,5,1,6,1,6,1,6,1,6,3,
-        6,84,8,6,1,6,1,6,3,6,88,8,6,1,7,1,7,1,7,1,8,1,8,1,8,1,8,1,8,3,8,
-        98,8,8,3,8,100,8,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,
-        8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,5,8,123,8,8,10,8,12,8,126,
-        9,8,1,9,1,9,3,9,130,8,9,1,10,1,10,1,11,1,11,4,11,136,8,11,11,11,
-        12,11,137,1,11,1,11,1,12,1,12,1,13,1,13,1,14,3,14,147,8,14,1,14,
-        3,14,150,8,14,1,14,1,14,1,15,1,15,1,15,0,1,16,16,0,2,4,6,8,10,12,
-        14,16,18,20,22,24,26,28,30,0,5,1,0,12,14,1,0,10,11,1,0,18,19,1,0,
-        20,25,1,0,6,8,163,0,33,1,0,0,0,2,39,1,0,0,0,4,51,1,0,0,0,6,59,1,
-        0,0,0,8,63,1,0,0,0,10,77,1,0,0,0,12,79,1,0,0,0,14,89,1,0,0,0,16,
-        99,1,0,0,0,18,129,1,0,0,0,20,131,1,0,0,0,22,133,1,0,0,0,24,141,1,
-        0,0,0,26,143,1,0,0,0,28,146,1,0,0,0,30,153,1,0,0,0,32,34,3,2,1,0,
-        33,32,1,0,0,0,34,35,1,0,0,0,35,33,1,0,0,0,35,36,1,0,0,0,36,37,1,
-        0,0,0,37,38,5,0,0,1,38,1,1,0,0,0,39,40,5,2,0,0,40,41,5,37,0,0,41,
-        43,5,30,0,0,42,44,3,4,2,0,43,42,1,0,0,0,43,44,1,0,0,0,44,45,1,0,
-        0,0,45,47,5,31,0,0,46,48,3,8,4,0,47,46,1,0,0,0,47,48,1,0,0,0,48,
-        49,1,0,0,0,49,50,3,22,11,0,50,3,1,0,0,0,51,56,3,6,3,0,52,53,5,29,
-        0,0,53,55,3,6,3,0,54,52,1,0,0,0,55,58,1,0,0,0,56,54,1,0,0,0,56,57,
-        1,0,0,0,57,5,1,0,0,0,58,56,1,0,0,0,59,60,3,26,13,0,60,61,5,27,0,
-        0,61,62,3,24,12,0,62,7,1,0,0,0,63,64,5,9,0,0,64,65,3,24,12,0,65,
-        9,1,0,0,0,66,78,5,28,0,0,67,78,3,12,6,0,68,78,3,14,7,0,69,71,5,32,
-        0,0,70,72,3,10,5,0,71,70,1,0,0,0,72,73,1,0,0,0,73,71,1,0,0,0,73,
-        74,1,0,0,0,74,75,1,0,0,0,75,76,5,33,0,0,76,78,1,0,0,0,77,66,1,0,
-        0,0,77,67,1,0,0,0,77,68,1,0,0,0,77,69,1,0,0,0,78,11,1,0,0,0,79,80,
-        5,1,0,0,80,83,5,37,0,0,81,82,5,27,0,0,82,84,3,24,12,0,83,81,1,0,
-        0,0,83,84,1,0,0,0,84,87,1,0,0,0,85,86,5,26,0,0,86,88,3,16,8,0,87,
-        85,1,0,0,0,87,88,1,0,0,0,88,13,1,0,0,0,89,90,3,16,8,0,90,91,5,28,
-        0,0,91,15,1,0,0,0,92,93,6,8,-1,0,93,100,3,18,9,0,94,100,3,20,10,
-        0,95,97,5,3,0,0,96,98,3,16,8,0,97,96,1,0,0,0,97,98,1,0,0,0,98,100,
-        1,0,0,0,99,92,1,0,0,0,99,94,1,0,0,0,99,95,1,0,0,0,100,124,1,0,0,
-        0,101,102,10,8,0,0,102,103,7,0,0,0,103,123,3,16,8,9,104,105,10,7,
-        0,0,105,106,7,1,0,0,106,123,3,16,8,8,107,108,10,6,0,0,108,109,7,
-        2,0,0,109,123,3,16,8,7,110,111,10,5,0,0,111,112,5,15,0,0,112,123,
-        3,16,8,6,113,114,10,4,0,0,114,115,5,17,0,0,115,123,3,16,8,5,116,
-        117,10,3,0,0,117,118,5,16,0,0,118,123,3,16,8,4,119,120,10,2,0,0,
-        120,121,7,3,0,0,121,123,3,16,8,3,122,101,1,0,0,0,122,104,1,0,0,0,
-        122,107,1,0,0,0,122,110,1,0,0,0,122,113,1,0,0,0,122,116,1,0,0,0,
-        122,119,1,0,0,0,123,126,1,0,0,0,124,122,1,0,0,0,124,125,1,0,0,0,
-        125,17,1,0,0,0,126,124,1,0,0,0,127,130,5,38,0,0,128,130,5,34,0,0,
-        129,127,1,0,0,0,129,128,1,0,0,0,130,19,1,0,0,0,131,132,5,37,0,0,
-        132,21,1,0,0,0,133,135,5,32,0,0,134,136,3,10,5,0,135,134,1,0,0,0,
-        136,137,1,0,0,0,137,135,1,0,0,0,137,138,1,0,0,0,138,139,1,0,0,0,
-        139,140,5,33,0,0,140,23,1,0,0,0,141,142,7,4,0,0,142,25,1,0,0,0,143,
-        144,3,28,14,0,144,27,1,0,0,0,145,147,5,4,0,0,146,145,1,0,0,0,146,
-        147,1,0,0,0,147,149,1,0,0,0,148,150,5,5,0,0,149,148,1,0,0,0,149,
-        150,1,0,0,0,150,151,1,0,0,0,151,152,3,30,15,0,152,29,1,0,0,0,153,
-        154,5,37,0,0,154,31,1,0,0,0,16,35,43,47,56,73,77,83,87,97,99,122,
-        124,129,137,146,149
+        1,5,5,5,72,8,5,10,5,12,5,75,9,5,1,5,3,5,78,8,5,1,5,1,5,1,5,1,5,1,
+        5,5,5,85,8,5,10,5,12,5,88,9,5,1,5,3,5,91,8,5,1,5,1,5,1,5,1,5,1,5,
+        5,5,98,8,5,10,5,12,5,101,9,5,1,5,3,5,104,8,5,1,5,1,5,1,5,1,5,3,5,
+        110,8,5,3,5,112,8,5,1,6,1,6,1,6,1,6,3,6,118,8,6,1,6,1,6,3,6,122,
+        8,6,1,7,1,7,1,7,1,8,1,8,1,8,3,8,130,8,8,1,8,1,8,1,8,1,8,1,8,1,8,
+        1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,1,8,5,8,
+        153,8,8,10,8,12,8,156,9,8,1,9,1,9,3,9,160,8,9,1,10,1,10,1,11,1,11,
+        4,11,166,8,11,11,11,12,11,167,1,11,3,11,171,8,11,1,11,1,11,1,12,
+        1,12,1,13,1,13,1,14,3,14,180,8,14,1,14,3,14,183,8,14,1,14,1,14,1,
+        15,1,15,1,15,0,1,16,16,0,2,4,6,8,10,12,14,16,18,20,22,24,26,28,30,
+        0,5,1,0,12,14,1,0,10,11,1,0,18,19,1,0,20,25,1,0,6,8,203,0,33,1,0,
+        0,0,2,39,1,0,0,0,4,51,1,0,0,0,6,59,1,0,0,0,8,63,1,0,0,0,10,111,1,
+        0,0,0,12,113,1,0,0,0,14,123,1,0,0,0,16,129,1,0,0,0,18,159,1,0,0,
+        0,20,161,1,0,0,0,22,163,1,0,0,0,24,174,1,0,0,0,26,176,1,0,0,0,28,
+        179,1,0,0,0,30,186,1,0,0,0,32,34,3,2,1,0,33,32,1,0,0,0,34,35,1,0,
+        0,0,35,33,1,0,0,0,35,36,1,0,0,0,36,37,1,0,0,0,37,38,5,0,0,1,38,1,
+        1,0,0,0,39,40,5,2,0,0,40,41,5,39,0,0,41,43,5,30,0,0,42,44,3,4,2,
+        0,43,42,1,0,0,0,43,44,1,0,0,0,44,45,1,0,0,0,45,47,5,31,0,0,46,48,
+        3,8,4,0,47,46,1,0,0,0,47,48,1,0,0,0,48,49,1,0,0,0,49,50,3,22,11,
+        0,50,3,1,0,0,0,51,56,3,6,3,0,52,53,5,29,0,0,53,55,3,6,3,0,54,52,
+        1,0,0,0,55,58,1,0,0,0,56,54,1,0,0,0,56,57,1,0,0,0,57,5,1,0,0,0,58,
+        56,1,0,0,0,59,60,3,26,13,0,60,61,5,27,0,0,61,62,3,24,12,0,62,7,1,
+        0,0,0,63,64,5,9,0,0,64,65,3,24,12,0,65,9,1,0,0,0,66,112,5,28,0,0,
+        67,112,3,12,6,0,68,112,3,14,7,0,69,73,5,32,0,0,70,72,3,10,5,0,71,
+        70,1,0,0,0,72,75,1,0,0,0,73,71,1,0,0,0,73,74,1,0,0,0,74,77,1,0,0,
+        0,75,73,1,0,0,0,76,78,3,16,8,0,77,76,1,0,0,0,77,78,1,0,0,0,78,79,
+        1,0,0,0,79,112,5,33,0,0,80,81,5,34,0,0,81,82,3,16,8,0,82,86,5,32,
+        0,0,83,85,3,10,5,0,84,83,1,0,0,0,85,88,1,0,0,0,86,84,1,0,0,0,86,
+        87,1,0,0,0,87,90,1,0,0,0,88,86,1,0,0,0,89,91,3,16,8,0,90,89,1,0,
+        0,0,90,91,1,0,0,0,91,92,1,0,0,0,92,93,5,33,0,0,93,94,1,0,0,0,94,
+        95,5,35,0,0,95,99,5,32,0,0,96,98,3,10,5,0,97,96,1,0,0,0,98,101,1,
+        0,0,0,99,97,1,0,0,0,99,100,1,0,0,0,100,103,1,0,0,0,101,99,1,0,0,
+        0,102,104,3,16,8,0,103,102,1,0,0,0,103,104,1,0,0,0,104,105,1,0,0,
+        0,105,106,5,33,0,0,106,112,1,0,0,0,107,109,5,3,0,0,108,110,3,16,
+        8,0,109,108,1,0,0,0,109,110,1,0,0,0,110,112,1,0,0,0,111,66,1,0,0,
+        0,111,67,1,0,0,0,111,68,1,0,0,0,111,69,1,0,0,0,111,80,1,0,0,0,111,
+        107,1,0,0,0,112,11,1,0,0,0,113,114,5,1,0,0,114,117,5,39,0,0,115,
+        116,5,27,0,0,116,118,3,24,12,0,117,115,1,0,0,0,117,118,1,0,0,0,118,
+        121,1,0,0,0,119,120,5,26,0,0,120,122,3,16,8,0,121,119,1,0,0,0,121,
+        122,1,0,0,0,122,13,1,0,0,0,123,124,3,16,8,0,124,125,5,28,0,0,125,
+        15,1,0,0,0,126,127,6,8,-1,0,127,130,3,18,9,0,128,130,3,20,10,0,129,
+        126,1,0,0,0,129,128,1,0,0,0,130,154,1,0,0,0,131,132,10,7,0,0,132,
+        133,7,0,0,0,133,153,3,16,8,8,134,135,10,6,0,0,135,136,7,1,0,0,136,
+        153,3,16,8,7,137,138,10,5,0,0,138,139,7,2,0,0,139,153,3,16,8,6,140,
+        141,10,4,0,0,141,142,5,15,0,0,142,153,3,16,8,5,143,144,10,3,0,0,
+        144,145,5,17,0,0,145,153,3,16,8,4,146,147,10,2,0,0,147,148,5,16,
+        0,0,148,153,3,16,8,3,149,150,10,1,0,0,150,151,7,3,0,0,151,153,3,
+        16,8,2,152,131,1,0,0,0,152,134,1,0,0,0,152,137,1,0,0,0,152,140,1,
+        0,0,0,152,143,1,0,0,0,152,146,1,0,0,0,152,149,1,0,0,0,153,156,1,
+        0,0,0,154,152,1,0,0,0,154,155,1,0,0,0,155,17,1,0,0,0,156,154,1,0,
+        0,0,157,160,5,40,0,0,158,160,5,36,0,0,159,157,1,0,0,0,159,158,1,
+        0,0,0,160,19,1,0,0,0,161,162,5,39,0,0,162,21,1,0,0,0,163,165,5,32,
+        0,0,164,166,3,10,5,0,165,164,1,0,0,0,166,167,1,0,0,0,167,165,1,0,
+        0,0,167,168,1,0,0,0,168,170,1,0,0,0,169,171,3,16,8,0,170,169,1,0,
+        0,0,170,171,1,0,0,0,171,172,1,0,0,0,172,173,5,33,0,0,173,23,1,0,
+        0,0,174,175,7,4,0,0,175,25,1,0,0,0,176,177,3,28,14,0,177,27,1,0,
+        0,0,178,180,5,4,0,0,179,178,1,0,0,0,179,180,1,0,0,0,180,182,1,0,
+        0,0,181,183,5,5,0,0,182,181,1,0,0,0,182,183,1,0,0,0,183,184,1,0,
+        0,0,184,185,3,30,15,0,185,29,1,0,0,0,186,187,5,39,0,0,187,31,1,0,
+        0,0,22,35,43,47,56,73,77,86,90,99,103,109,111,117,121,129,152,154,
+        159,167,170,179,182
     ];
 
     private static __ATN: antlr.ATN;
@@ -1242,6 +1363,77 @@ export class SemiStmtContext extends StatementContext {
         }
     }
 }
+export class IfExprContext extends StatementContext {
+    public _predicate?: ExpressionContext;
+    public _statement?: StatementContext;
+    public _cons_stmts: StatementContext[] = [];
+    public _cons_expr?: ExpressionContext;
+    public _alt_stmts: StatementContext[] = [];
+    public _alt_expr?: ExpressionContext;
+    public constructor(ctx: StatementContext) {
+        super(ctx.parent, ctx.invokingState);
+        super.copyFrom(ctx);
+    }
+    public IF(): antlr.TerminalNode {
+        return this.getToken(MiniRustParser.IF, 0)!;
+    }
+    public ELSE(): antlr.TerminalNode {
+        return this.getToken(MiniRustParser.ELSE, 0)!;
+    }
+    public expression(): ExpressionContext[];
+    public expression(i: number): ExpressionContext | null;
+    public expression(i?: number): ExpressionContext[] | ExpressionContext | null {
+        if (i === undefined) {
+            return this.getRuleContexts(ExpressionContext);
+        }
+
+        return this.getRuleContext(i, ExpressionContext);
+    }
+    public LBRACE(): antlr.TerminalNode[];
+    public LBRACE(i: number): antlr.TerminalNode | null;
+    public LBRACE(i?: number): antlr.TerminalNode | null | antlr.TerminalNode[] {
+    	if (i === undefined) {
+    		return this.getTokens(MiniRustParser.LBRACE);
+    	} else {
+    		return this.getToken(MiniRustParser.LBRACE, i);
+    	}
+    }
+    public RBRACE(): antlr.TerminalNode[];
+    public RBRACE(i: number): antlr.TerminalNode | null;
+    public RBRACE(i?: number): antlr.TerminalNode | null | antlr.TerminalNode[] {
+    	if (i === undefined) {
+    		return this.getTokens(MiniRustParser.RBRACE);
+    	} else {
+    		return this.getToken(MiniRustParser.RBRACE, i);
+    	}
+    }
+    public statement(): StatementContext[];
+    public statement(i: number): StatementContext | null;
+    public statement(i?: number): StatementContext[] | StatementContext | null {
+        if (i === undefined) {
+            return this.getRuleContexts(StatementContext);
+        }
+
+        return this.getRuleContext(i, StatementContext);
+    }
+    public override enterRule(listener: MiniRustListener): void {
+        if(listener.enterIfExpr) {
+             listener.enterIfExpr(this);
+        }
+    }
+    public override exitRule(listener: MiniRustListener): void {
+        if(listener.exitIfExpr) {
+             listener.exitIfExpr(this);
+        }
+    }
+    public override accept<Result>(visitor: MiniRustVisitor<Result>): Result | null {
+        if (visitor.visitIfExpr) {
+            return visitor.visitIfExpr(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
 export class ExprStmtContext extends StatementContext {
     public constructor(ctx: StatementContext) {
         super(ctx.parent, ctx.invokingState);
@@ -1268,39 +1460,30 @@ export class ExprStmtContext extends StatementContext {
         }
     }
 }
-export class BlockStmtContext extends StatementContext {
+export class RetExprContext extends StatementContext {
     public constructor(ctx: StatementContext) {
         super(ctx.parent, ctx.invokingState);
         super.copyFrom(ctx);
     }
-    public LBRACE(): antlr.TerminalNode {
-        return this.getToken(MiniRustParser.LBRACE, 0)!;
+    public RETURN(): antlr.TerminalNode {
+        return this.getToken(MiniRustParser.RETURN, 0)!;
     }
-    public RBRACE(): antlr.TerminalNode {
-        return this.getToken(MiniRustParser.RBRACE, 0)!;
-    }
-    public statement(): StatementContext[];
-    public statement(i: number): StatementContext | null;
-    public statement(i?: number): StatementContext[] | StatementContext | null {
-        if (i === undefined) {
-            return this.getRuleContexts(StatementContext);
-        }
-
-        return this.getRuleContext(i, StatementContext);
+    public expression(): ExpressionContext | null {
+        return this.getRuleContext(0, ExpressionContext);
     }
     public override enterRule(listener: MiniRustListener): void {
-        if(listener.enterBlockStmt) {
-             listener.enterBlockStmt(this);
+        if(listener.enterRetExpr) {
+             listener.enterRetExpr(this);
         }
     }
     public override exitRule(listener: MiniRustListener): void {
-        if(listener.exitBlockStmt) {
-             listener.exitBlockStmt(this);
+        if(listener.exitRetExpr) {
+             listener.exitRetExpr(this);
         }
     }
     public override accept<Result>(visitor: MiniRustVisitor<Result>): Result | null {
-        if (visitor.visitBlockStmt) {
-            return visitor.visitBlockStmt(this);
+        if (visitor.visitRetExpr) {
+            return visitor.visitRetExpr(this);
         } else {
             return visitor.visitChildren(this);
         }
@@ -1327,6 +1510,47 @@ export class LetStmtContext extends StatementContext {
     public override accept<Result>(visitor: MiniRustVisitor<Result>): Result | null {
         if (visitor.visitLetStmt) {
             return visitor.visitLetStmt(this);
+        } else {
+            return visitor.visitChildren(this);
+        }
+    }
+}
+export class BlockExprContext extends StatementContext {
+    public constructor(ctx: StatementContext) {
+        super(ctx.parent, ctx.invokingState);
+        super.copyFrom(ctx);
+    }
+    public LBRACE(): antlr.TerminalNode {
+        return this.getToken(MiniRustParser.LBRACE, 0)!;
+    }
+    public RBRACE(): antlr.TerminalNode {
+        return this.getToken(MiniRustParser.RBRACE, 0)!;
+    }
+    public statement(): StatementContext[];
+    public statement(i: number): StatementContext | null;
+    public statement(i?: number): StatementContext[] | StatementContext | null {
+        if (i === undefined) {
+            return this.getRuleContexts(StatementContext);
+        }
+
+        return this.getRuleContext(i, StatementContext);
+    }
+    public expression(): ExpressionContext | null {
+        return this.getRuleContext(0, ExpressionContext);
+    }
+    public override enterRule(listener: MiniRustListener): void {
+        if(listener.enterBlockExpr) {
+             listener.enterBlockExpr(this);
+        }
+    }
+    public override exitRule(listener: MiniRustListener): void {
+        if(listener.exitBlockExpr) {
+             listener.exitBlockExpr(this);
+        }
+    }
+    public override accept<Result>(visitor: MiniRustVisitor<Result>): Result | null {
+        if (visitor.visitBlockExpr) {
+            return visitor.visitBlockExpr(this);
         } else {
             return visitor.visitChildren(this);
         }
@@ -1444,35 +1668,6 @@ export class LiteralExprContext extends ExpressionContext {
     public override accept<Result>(visitor: MiniRustVisitor<Result>): Result | null {
         if (visitor.visitLiteralExpr) {
             return visitor.visitLiteralExpr(this);
-        } else {
-            return visitor.visitChildren(this);
-        }
-    }
-}
-export class RetExprContext extends ExpressionContext {
-    public constructor(ctx: ExpressionContext) {
-        super(ctx.parent, ctx.invokingState);
-        super.copyFrom(ctx);
-    }
-    public RETURN(): antlr.TerminalNode {
-        return this.getToken(MiniRustParser.RETURN, 0)!;
-    }
-    public expression(): ExpressionContext | null {
-        return this.getRuleContext(0, ExpressionContext);
-    }
-    public override enterRule(listener: MiniRustListener): void {
-        if(listener.enterRetExpr) {
-             listener.enterRetExpr(this);
-        }
-    }
-    public override exitRule(listener: MiniRustListener): void {
-        if(listener.exitRetExpr) {
-             listener.exitRetExpr(this);
-        }
-    }
-    public override accept<Result>(visitor: MiniRustVisitor<Result>): Result | null {
-        if (visitor.visitRetExpr) {
-            return visitor.visitRetExpr(this);
         } else {
             return visitor.visitChildren(this);
         }
@@ -1733,6 +1928,9 @@ export class Block_expressionContext extends antlr.ParserRuleContext {
         }
 
         return this.getRuleContext(i, StatementContext);
+    }
+    public expression(): ExpressionContext | null {
+        return this.getRuleContext(0, ExpressionContext);
     }
     public override get ruleIndex(): number {
         return MiniRustParser.RULE_block_expression;

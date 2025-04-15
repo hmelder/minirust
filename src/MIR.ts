@@ -5,7 +5,7 @@ export namespace MIR {
     export type Scope = number
     export type FuncId = string // Function identifier (e.g., function name)
     export type Type = 'i32' | 'u32' | 'bool'
-    export type Value = number | boolean
+    export type Value = number
 
     // --- Values, Places, Operands ---
 
@@ -19,7 +19,7 @@ export namespace MIR {
 
     // Represents a value used in computations (R-value part)
     export type Operand =
-        | { kind: 'literal'; value: number /* | boolean  | string etc */ } // Constants
+        | { kind: 'literal'; value: Value; type: Type } // Constants
         | { kind: 'use'; place: Place } // Use the value stored in a Place
 
     // Binary operators supported in MIR
@@ -48,15 +48,17 @@ export namespace MIR {
               op: ArithmeticOp
               left: Operand
               right: Operand
+              type: Type
           }
         | {
               kind: 'compOp'
               op: CompOp
               left: Operand
               right: Operand
+              type: Type
           }
         // | { kind: 'unaryOp'; op: MirUnaryOp; operand: Operand } // If needed
-        | { kind: 'literal'; value: Value }
+        | { kind: 'literal'; value: Value; type: Type }
 
     // --- MIR Statements (Inside Basic Blocks) ---
     export type MirStatement = { kind: 'assign'; place: Place; rvalue: RValue } // The most common statement: place = rvalue

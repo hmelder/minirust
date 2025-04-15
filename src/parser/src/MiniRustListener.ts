@@ -11,11 +11,12 @@ import { Function_return_typeContext } from "./MiniRustParser.js";
 import { SemiStmtContext } from "./MiniRustParser.js";
 import { LetStmtContext } from "./MiniRustParser.js";
 import { ExprStmtContext } from "./MiniRustParser.js";
-import { BlockStmtContext } from "./MiniRustParser.js";
+import { BlockExprContext } from "./MiniRustParser.js";
+import { IfExprContext } from "./MiniRustParser.js";
+import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
-import { RetExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
 import { CompExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
@@ -121,17 +122,41 @@ export class MiniRustListener implements ParseTreeListener {
      */
     exitExprStmt?: (ctx: ExprStmtContext) => void;
     /**
-     * Enter a parse tree produced by the `BlockStmt`
+     * Enter a parse tree produced by the `BlockExpr`
      * labeled alternative in `MiniRustParser.statement`.
      * @param ctx the parse tree
      */
-    enterBlockStmt?: (ctx: BlockStmtContext) => void;
+    enterBlockExpr?: (ctx: BlockExprContext) => void;
     /**
-     * Exit a parse tree produced by the `BlockStmt`
+     * Exit a parse tree produced by the `BlockExpr`
      * labeled alternative in `MiniRustParser.statement`.
      * @param ctx the parse tree
      */
-    exitBlockStmt?: (ctx: BlockStmtContext) => void;
+    exitBlockExpr?: (ctx: BlockExprContext) => void;
+    /**
+     * Enter a parse tree produced by the `IfExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     */
+    enterIfExpr?: (ctx: IfExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `IfExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     */
+    exitIfExpr?: (ctx: IfExprContext) => void;
+    /**
+     * Enter a parse tree produced by the `RetExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     */
+    enterRetExpr?: (ctx: RetExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `RetExpr`
+     * labeled alternative in `MiniRustParser.statement`.
+     * @param ctx the parse tree
+     */
+    exitRetExpr?: (ctx: RetExprContext) => void;
     /**
      * Enter a parse tree produced by `MiniRustParser.let_statement`.
      * @param ctx the parse tree
@@ -164,18 +189,6 @@ export class MiniRustListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitLiteralExpr?: (ctx: LiteralExprContext) => void;
-    /**
-     * Enter a parse tree produced by the `RetExpr`
-     * labeled alternative in `MiniRustParser.expression`.
-     * @param ctx the parse tree
-     */
-    enterRetExpr?: (ctx: RetExprContext) => void;
-    /**
-     * Exit a parse tree produced by the `RetExpr`
-     * labeled alternative in `MiniRustParser.expression`.
-     * @param ctx the parse tree
-     */
-    exitRetExpr?: (ctx: RetExprContext) => void;
     /**
      * Enter a parse tree produced by the `BinOpExpr`
      * labeled alternative in `MiniRustParser.expression`.

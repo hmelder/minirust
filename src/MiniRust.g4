@@ -22,7 +22,11 @@ statement
     : SEMI #SemiStmt
     | let_statement #LetStmt
     | expression_statement #ExprStmt
-    | LBRACE statement+ RBRACE #BlockStmt
+    // Expressions moved up into statement rule because of direct-recursion limitation
+    | LBRACE statement* expression? RBRACE #BlockExpr
+    | IF predicate=expression (LBRACE (cons_stmts += statement)* cons_expr=expression? RBRACE)
+      ELSE (LBRACE (alt_stmts += statement)* alt_expr=expression? RBRACE) #IfExpr
+    | RETURN expression? #RetExpr
     ;
 
 // https://doc.rust-lang.org/reference/statements.html#let-statements
@@ -49,9 +53,6 @@ expression
     // Comparison Expression
     // https://doc.rust-lang.org/reference/expressions/operator-expr.html#comparison-operators
     | expression op=(EQ | NEQ | LT | GT | LE | GE) expression # CompExpr
-    // Return expression
-    // https://doc.rust-lang.org/reference/expressions/return-expr.html
-    | RETURN expression? # RetExpr
     ;
 
 literal_expression
@@ -64,8 +65,7 @@ path_expression:
     IDENTIFIER;
 
 block_expression:
-    LBRACE statement+ RBRACE;
-
+    LBRACE statement+ expression? RBRACE;
 
 // Represents a type annotation (simplified)
 type
@@ -135,6 +135,9 @@ LBRACKET : '(';
 RBRACKET : ')';
 LBRACE   : '{';
 RBRACE   : '}';
+
+IF : 'if';
+ELSE: 'else';
 
 BOOL_LITERAL
     : TRUE

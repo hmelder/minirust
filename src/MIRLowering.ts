@@ -10,13 +10,14 @@ import {
     Let_statementContext,
     Path_expressionContext,
     FunctionContext,
-    BlockStmtContext,
     IntLiteralContext,
     BoolLiteralContext,
     LiteralExprContext,
     PathExprContext,
     LetStmtContext,
-    CompExprContext, // Import if needed for type checks/casting
+    CompExprContext,
+    BlockExprContext,
+    IfExprContext,
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -27,9 +28,11 @@ function assertNever(x: never): never {
     throw new Error('Unexpected object: ' + x)
 }
 
+type LoweringReturn = MIR.Operand | undefined
+
 export class MIRLowering
-    extends AbstractParseTreeVisitor<unknown>
-    implements MiniRustVisitor<unknown>
+    extends AbstractParseTreeVisitor<LoweringReturn>
+    implements MiniRustVisitor<LoweringReturn>
 {
     // State managed by the visitor
     private program!: MIR.Program // Definite assignment: Initialized in visitProg
@@ -73,6 +76,8 @@ export class MIRLowering
             const id = op.place.id
             const slot = this.currentFunc.locals[id]
             return slot.type
+        } else if (op.kind === 'literal') {
+            return op.type
         }
         // TODO: Handle literals
         throw new Error('unexpected operand')
@@ -135,15 +140,19 @@ export class MIRLowering
     }
 
     // Fallback for visiting nodes if specific visitors aren't implemented
-    protected defaultResult(): unknown {
+    protected defaultResult(): undefined {
         // console.warn("Using defaultResult (visiting unhandled node)");
         return undefined
+    }
+
+    public getProgram(): MIR.Program {
+        return this.program
     }
 
     // --- Visitor Method Implementations ---
 
     // Entry point: Creates the graph and processes the program
-    visitProg(ctx: ProgContext): MIR.Program {
+    visitProg(ctx: ProgContext): undefined {
         this.program = this.createProgram()
         this.currentScope = 0 // Global scope
 
@@ -161,10 +170,10 @@ export class MIRLowering
             throw new Error(`Program is missing 'main' function`)
         }
 
-        return this.program
+        return undefined
     }
 
-    visitFunction(ctx: FunctionContext): void {
+    visitFunction(ctx: FunctionContext): undefined {
         const name = ctx.IDENTIFIER().getText()
 
         this.currentFunc = this.createFunction(name)
@@ -189,9 +198,10 @@ export class MIRLowering
 
         // Add function to program
         this.program.functions.set(name, this.currentFunc)
+        return undefined
     }
 
-    visitLetStmt(ctx: LetStmtContext): void {
+    visitLetStmt(ctx: LetStmtContext): undefined {
         const innerCtx = ctx.let_statement()
         const operandExpr = innerCtx.expression()
         const identifier = innerCtx.IDENTIFIER().getText()
@@ -205,16 +215,62 @@ export class MIRLowering
         } else {
             throw new Error(`Invalid operand kind in let statement ${operand}`)
         }
+        return undefined
     }
 
-    visitBlockStmt(ctx: BlockStmtContext): void {
-        this.currentScope += 1
+    visitIfExpr(ctx: IfExprContext): MIR.Operand {
+        const predicateCtx = ctx._predicate
+        const predicate: MIR.Operand = this.visit(predicateCtx)
 
-        for (let stmt of ctx.statement()) {
-            this.visit(stmt)
+        if (this.checkType(predicate) !== 'bool') {
+            throw new Error(
+                `Predicate returns type other than bool:; ${ctx.getText()}`
+            )
         }
 
+        const bb = this.currentBlockId
+        const cons_bb = this.newBlock()
+        const alt_bb = this.newBlock()
+
+        this.startBlock(cons_bb.id)
+        this.blockHelper(ctx._cons_stmts, ctx._cons_expr)
+        this.startBlock(alt_bb.id)
+        this.blockHelper(ctx._alt_stmts, ctx._alt_expr)
+
+        this.currentFunc.blocks[bb].terminator = {
+            kind: 'branch',
+            condition: predicate,
+            trueTarget: cons_bb.id,
+            falseTarget: alt_bb.id,
+        }
+
+        // TODO: Change to UNIT
+        return { kind: 'literal', value: 0, type: 'i32' }
+    }
+
+    private blockHelper(
+        stmts: StatementContext[],
+        expr: ExpressionContext
+    ): LoweringReturn {
+        let result = undefined
+
+        this.currentScope += 1
+        if (stmts) {
+            for (let stmt of stmts) {
+                this.visit(stmt)
+            }
+        }
+
+        if (expr) {
+            result = this.visit(expr)
+        }
         this.currentScope -= 1
+
+        return result
+    }
+
+    visitBlockExpr(ctx: BlockExprContext): LoweringReturn {
+        return this.blockHelper(ctx.statement(), ctx.expression())
     }
 
     // Visits a binary operation - returns MIR.Operand representing the result location
@@ -268,6 +324,7 @@ export class MIRLowering
             op: mirOp,
             left: leftOperand,
             right: rightOperand,
+            type: 'i32',
         }
 
         // Add the assignment statement to the current block
@@ -345,6 +402,7 @@ export class MIRLowering
             op: mirOp,
             left: leftOperand,
             right: rightOperand,
+            type: 'i32',
         }
 
         // Add the assignment statement to the current block
@@ -372,7 +430,7 @@ export class MIRLowering
         // Create a temporary local to store this literal value
         // TODO: change type based on literal
         const place = this.newLocal('i32')
-        const rvalue: MIR.RValue = { kind: 'literal', value: num }
+        const rvalue: MIR.RValue = { kind: 'literal', value: num, type: 'i32' }
 
         // Assign the literal value to the temporary local
         this.addStatement({ kind: 'assign', place: place, rvalue: rvalue })
@@ -385,7 +443,11 @@ export class MIRLowering
         const valTest = ctx.BOOL_LITERAL().getText()
         let val = valTest === 'true'
         const place = this.newLocal('bool')
-        const rvalue: MIR.RValue = { kind: 'literal', value: val }
+        const rvalue: MIR.RValue = {
+            kind: 'literal',
+            value: val ? 1 : 0,
+            type: 'bool',
+        }
 
         console.warn('visited!!')
 
@@ -430,11 +492,12 @@ export class MIRLowering
         return { kind: 'use', place: { kind: 'local', id: bestId } }
     }
 
-    visitRetExpr(ctx: RetExprContext) {
+    visitRetExpr(ctx: RetExprContext): MIR.Operand {
         if (ctx.expression() != null) {
-            const val = this.visit(ctx.expression()) as MIR.RValue
+            const val = this.visit(ctx.expression())
             // TODO: Error checking
             this.setTerminator({ kind: 'return', rvalue: val })
+            return val
         } else {
             throw new Error('TODO')
         }

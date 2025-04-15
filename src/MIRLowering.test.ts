@@ -7,8 +7,7 @@ import { MiniRustParser } from './parser/src/MiniRustParser'
 import { MIRLowering } from './MIRLowering'
 import { MIR } from './MIR'
 
-// Helper function (same as before)
-function lowerProg(input: string): MIR.Function {
+function lowerProg(input: string): MIR.Program {
     const inputStream = CharStream.fromString(input)
     const lexer = new MiniRustLexer(inputStream)
     const tokenStream = new CommonTokenStream(lexer)
@@ -16,8 +15,7 @@ function lowerProg(input: string): MIR.Function {
     const tree = parser.prog()
     const visitor = new MIRLowering()
     const result = visitor.visit(tree)
-    // TODO: check result
-    return result as MIR.Function
+    return visitor.getProgram()
 }
 
 test('MIR Lowering', async (t) => {
@@ -33,12 +31,12 @@ test('MIR Lowering', async (t) => {
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 0 },
-                            rvalue: { kind: 'literal', value: true },
+                            rvalue: { kind: 'literal', value: 1, type: 'bool' },
                         },
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 1 },
-                            rvalue: { kind: 'literal', value: 42 },
+                            rvalue: { kind: 'literal', value: 42, type: 'i32' },
                         },
                     ],
                     terminator: {
@@ -82,12 +80,12 @@ test('MIR Lowering', async (t) => {
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 0 },
-                            rvalue: { kind: 'literal', value: 1 },
+                            rvalue: { kind: 'literal', value: 1, type: 'i32' },
                         },
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 1 },
-                            rvalue: { kind: 'literal', value: 2 },
+                            rvalue: { kind: 'literal', value: 2, type: 'i32' },
                         },
                         {
                             kind: 'assign',
@@ -109,12 +107,13 @@ test('MIR Lowering', async (t) => {
                                         kind: 'local',
                                     },
                                 },
+                                type: 'i32',
                             },
                         },
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 3 },
-                            rvalue: { kind: 'literal', value: 3 },
+                            rvalue: { kind: 'literal', value: 3, type: 'i32' },
                         },
                         {
                             kind: 'assign',
@@ -136,6 +135,7 @@ test('MIR Lowering', async (t) => {
                                         kind: 'local',
                                     },
                                 },
+                                type: 'i32',
                             },
                         },
                     ],
@@ -180,12 +180,12 @@ test('MIR Lowering', async (t) => {
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 0 },
-                            rvalue: { kind: 'literal', value: 0 },
+                            rvalue: { kind: 'literal', value: 0, type: 'i32' },
                         },
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 1 },
-                            rvalue: { kind: 'literal', value: 1 },
+                            rvalue: { kind: 'literal', value: 1, type: 'i32' },
                         },
                     ],
                     terminator: {
@@ -228,12 +228,12 @@ test('MIR Lowering', async (t) => {
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 0 },
-                            rvalue: { kind: 'literal', value: 42 },
+                            rvalue: { kind: 'literal', value: 42, type: 'i32' },
                         },
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 1 },
-                            rvalue: { kind: 'literal', value: 43 },
+                            rvalue: { kind: 'literal', value: 43, type: 'i32' },
                         },
                         {
                             kind: 'assign',
@@ -258,12 +258,13 @@ test('MIR Lowering', async (t) => {
                                         kind: 'local',
                                     },
                                 },
+                                type: 'i32',
                             },
                         },
                         {
                             kind: 'assign',
                             place: { kind: 'local', id: 3 },
-                            rvalue: { kind: 'literal', value: 0 },
+                            rvalue: { kind: 'literal', value: 0, type: 'i32' },
                         },
                     ],
                     terminator: {

@@ -5,7 +5,7 @@ import { CharStream, CommonTokenStream } from 'antlr4ng'
 import { TypeChecker } from './TypeChecker'
 import { MIRLowering } from './MIRLowering'
 import { MIRToVMLowering } from './MIRToVMLowering'
-import { VM } from './VM'
+import { VM } from './vm/VM'
 import { MIR } from './MIR'
 
 export function evaluate(chunk: string): VM.Data {
@@ -27,8 +27,8 @@ export function evaluate(chunk: string): VM.Data {
 
     // Lower to MIR
     const lowerToMIR = new MIRLowering()
-    const program = lowerToMIR.visit(tree) as MIR.Program
-    // TOOD check if graph is a MIR.Graph
+    lowerToMIR.visit(tree)
+    const program = lowerToMIR.getProgram()
 
     // Lower to VM
     const lowerToVM = new MIRToVMLowering(program)
@@ -36,7 +36,6 @@ export function evaluate(chunk: string): VM.Data {
 
     // Execute
     const vm = new VM.Executor(instrs)
-    const resultSlot = vm.run()
 
-    return resultSlot.value
+    return vm.run()
 }
