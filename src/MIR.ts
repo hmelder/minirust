@@ -81,6 +81,7 @@ export namespace MIR {
               returnValue: Place
           }
         | { kind: 'unreachable' } // Marks blocks that should not be reached
+        | { kind: 'fallthrough' }
 
     // --- Basic Block & CFG ---
     export interface BasicBlock {
