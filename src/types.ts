@@ -1,6 +1,7 @@
 export enum PrimitiveType {
     I32 = 'i32',
     U32 = 'u32',
+    Bool = 'bool',
     Unit = '()', // Represents the absence of a value (like void)
     Error = '<error>', // Special type for error propagation
     Unknown = '<unknown>', // For cases where type cannot be determined yet
