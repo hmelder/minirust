@@ -101,6 +101,42 @@ export class MIRToVMLowering {
                             type: stmt.rvalue.type,
                         })
                         break
+                    case 'arithmeticOp':
+                        // Push left operand
+                        const leftInstrs = this.lowerOperandToStack(stmt.rvalue.left, func)
+                        this.pushInstrs(leftInstrs)
+                        
+                        // Push right operand
+                        const rightInstrs = this.lowerOperandToStack(stmt.rvalue.right, func)
+                        this.pushInstrs(rightInstrs)
+                        
+                        // Perform arithmetic operation
+                        let opcode: VM.Op
+                        switch (stmt.rvalue.op) {
+                            case MIR.ArithmeticOp.Add:
+                                opcode = 'ADD'
+                                break
+                            case MIR.ArithmeticOp.Sub:
+                                opcode = 'SUB'
+                                break
+                            case MIR.ArithmeticOp.Mul:
+                                opcode = 'MUL'
+                                break
+                            case MIR.ArithmeticOp.Div:
+                                opcode = 'DIV'
+                                break
+                            default:
+                                throw new Error(`Unsupported arithmetic operation: ${stmt.rvalue.op}`)
+                        }
+                        this.pushInstr({ opcode })
+                        
+                        // Store result
+                        this.pushInstr({
+                            opcode: 'POPA',
+                            off: this.nextLocalId++,
+                            type: stmt.rvalue.type
+                        })
+                        break
                     default:
                         throw new Error(
                             `rvalue of kind ${stmt.rvalue.kind} is unsupported`
