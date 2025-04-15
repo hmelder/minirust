@@ -13,6 +13,7 @@ import {
     TypeContext, // Context for type annotations like ': u32'
     IntLiteralContext,
     BoolLiteralContext,
+    IfExprContext,
     SemiStmtContext,
     BlockExprContext,
     LetStmtContext,
@@ -234,10 +235,12 @@ export class TypeChecker
         return PrimitiveType.Unit;
     }
 
-    visitSemiStmt(ctx: SemiStmtContext): MiniRustType {}
+    visitSemiStmt(ctx: SemiStmtContext): MiniRustType {
+        this.visitChildren(ctx); // If it has an expression inside, process it
+        return PrimitiveType.Unit;
+    }
     
-
-
+    
     visitBinOpExpr(ctx: BinOpExprContext): MiniRustType {
         
         // Use specific accessors if available, otherwise getChild
@@ -394,7 +397,7 @@ export class TypeChecker
         const exprCtx = ctx.expression()
         if (exprCtx) {
             returnValType = this.visitExpression(exprCtx)
-            console.log(returnValType)
+            console.log("Return Type:", returnValType)
         }
         
         // --- Check against expected function return type ---
@@ -418,7 +421,7 @@ export class TypeChecker
 
         // The 'return' expression itself doesn't really have a value type accessible
         // after it, often considered 'Never' type (!). Returning Unit or Error is practical.
-        return PrimitiveType.Unit // Or Error if mismatch occurred
+        return returnValType // Or Error if mismatch occurred
     }
 
     // Override visitExpression to delegate correctly based on actual context type
@@ -444,7 +447,10 @@ export class TypeChecker
         } else if (ctx instanceof Block_expressionContext) {
             // Check for your Identifier usage context
             return this.visitBlock_expression(ctx)
-        }else if (ctx instanceof PathExprContext) {
+        } else if (ctx instanceof IfExprContext) {
+            // Check for your Identifier usage context
+            return this.visitIfExpr(ctx)
+        } else if (ctx instanceof PathExprContext) {
             // Check for your Identifier usage context
             return this.visitPath_expression(ctx.path_expression())
         }
@@ -560,4 +566,49 @@ export class TypeChecker
     
         return fnType.returnType;
     }
+
+    visitIfExpr(ctx: IfExprContext): MiniRustType {
+        const predicateExpr = ctx.expression(0);
+        const predicateType = this.visitExpression(predicateExpr);
+    
+        if (predicateType !== PrimitiveType.Bool) {
+            this.addError(
+                `Condition of 'if' must be of type 'bool', but found '${predicateType}'`,
+                predicateExpr
+            );
+        }
+    
+        const statements = ctx.statement();
+        
+        const mid = Math.floor(statements.length / 2); // crude split between then/else
+    
+        // Visit 'then' statements
+        let thenType: MiniRustType = PrimitiveType.Unit;
+        for (let i = 0; i < mid; i++) {
+            const stmt = statements[i];
+            console.log("Now running if statement:",stmt.constructor.name);
+            thenType = this.visitExpression(stmt);
+            console.log("thentype:", thenType);
+        }
+    
+        // Visit 'else' statements (if any)
+        let elseType: MiniRustType = PrimitiveType.Unit;
+        for (let i = mid; i < statements.length; i++) {
+            const stmt = statements[i];
+            console.log("Now running then statement:",stmt.constructor.name);
+            elseType = this.visitExpression(stmt);
+            console.log("elsetype:", elseType);
+        }
+    
+        if (!typesEqual(thenType, elseType)) {
+            this.addError(
+                `Mismatched types in 'if' branches: 'then' is '${thenType}', 'else' is '${elseType}'`,
+                ctx
+            );
+            return PrimitiveType.Error;
+        }
+    
+        return thenType;
+    }
+    
 }
