@@ -137,6 +137,48 @@ export class MIRToVMLowering {
                             type: stmt.rvalue.type
                         })
                         break
+                    case 'compOp':
+                        // Push left operand
+                        const compLeftInstrs = this.lowerOperandToStack(stmt.rvalue.left, func)
+                        this.pushInstrs(compLeftInstrs)
+                        
+                        // Push right operand
+                        const compRightInstrs = this.lowerOperandToStack(stmt.rvalue.right, func)
+                        this.pushInstrs(compRightInstrs)
+                        
+                        // Perform comparison operation
+                        let compOpcode: VM.Op
+                        switch (stmt.rvalue.op) {
+                            case MIR.CompOp.Eq:
+                                compOpcode = 'EQ'
+                                break
+                            case MIR.CompOp.Ne:
+                                compOpcode = 'NE'
+                                break
+                            case MIR.CompOp.Lt:
+                                compOpcode = 'LT'
+                                break
+                            case MIR.CompOp.Gt:
+                                compOpcode = 'GT'
+                                break
+                            case MIR.CompOp.Le:
+                                compOpcode = 'LE'
+                                break
+                            case MIR.CompOp.Ge:
+                                compOpcode = 'GE'
+                                break
+                            default:
+                                throw new Error(`Unsupported comparison operation: ${stmt.rvalue.op}`)
+                        }
+                        this.pushInstr({ opcode: compOpcode })
+                        
+                        // Store result
+                        this.pushInstr({
+                            opcode: 'POPA',
+                            off: this.nextLocalId++,
+                            type: 'bool'
+                        })
+                        break
                     default:
                         throw new Error(
                             `rvalue of kind ${stmt.rvalue.kind} is unsupported`

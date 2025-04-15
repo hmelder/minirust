@@ -1,12 +1,17 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2025 Hugo Melder
 
+import { VM } from './VM'
+
+type DataType = VM.DataType
+
 export class Stack {
     private readonly buffer: ArrayBuffer
     private readonly view: DataView
     private sp: number // Stack Pointer: Offset of the next free byte
     private readonly capacity: number
     private littleEndian: boolean
+    private readonly types: DataType[] = []
 
     /**
      * Creates a new stack with a fixed capacity.
@@ -249,5 +254,12 @@ export class Stack {
                 `Out of bounds access: Trying to access ${size} bytes at offset ${offset}. Capacity: ${this.capacity}`
             )
         }
+    }
+
+    public peekType(): DataType {
+        if (this.sp === 0) {
+            throw new Error('Stack underflow')
+        }
+        return this.types[this.sp - 1]
     }
 }
