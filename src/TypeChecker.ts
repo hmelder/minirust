@@ -141,6 +141,13 @@ export class TypeChecker
             ) {
                 // Error already reported, propagate error type
                 finalType = PrimitiveType.Error
+            } else if (declaredType === PrimitiveType.Bool && !(initializerType === PrimitiveType.Bool)) {
+                // Special case: boolean variables can only be assigned boolean values
+                this.addError(
+                    `Cannot assign value of type '${initializerType}' to boolean variable '${identName}'. Only 'true' or 'false' are allowed.`,
+                    exprCtx!
+                )
+                finalType = PrimitiveType.Error
             } else if (!typesEqual(declaredType, initializerType)) {
                 this.addError(
                     `Mismatched types: expected '${declaredType}', found '${initializerType}'`,
@@ -310,6 +317,8 @@ export class TypeChecker
             // Could be enhanced by suffixes (e.g., 10_u32) or context.
             // TODO: Handle potential suffixes if added to grammar
             return PrimitiveType.I32
+        } else if (ctx.BOOL_LITERAL()) {
+            return PrimitiveType.Bool;
         }
         // TODO: Handle other literals (bool, string) if added
         this.addError('Unsupported literal type encountered.', ctx)
