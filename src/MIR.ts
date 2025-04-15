@@ -108,8 +108,7 @@ export namespace MIR {
         localCounter: number // To generate fresh LocalIds for temps/vars
         blockCounter: number // To generate fresh BasicBlockIds
         argCount: number // Number of locals that are arguments
-        // Optional: Could designate a specific local for the return value place
-        // returnLocal?: LocalId; // Often LocalId 0 (_0) by convention
+        returnType: Type
     }
 
     // --- Program (NEW TOP-LEVEL STRUCTURE) ---

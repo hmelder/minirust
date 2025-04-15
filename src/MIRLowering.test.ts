@@ -58,6 +58,7 @@ test('MIR Lowering', async (t) => {
             localCounter: 2,
             blockCounter: 1,
             argCount: 0,
+            returnType: 'i32',
         })
 
         assert.deepStrictEqual(
@@ -161,6 +162,7 @@ test('MIR Lowering', async (t) => {
             localCounter: 5,
             blockCounter: 1,
             argCount: 0,
+            returnType: 'i32',
         })
 
         assert.deepStrictEqual(lowerProg('fn main() { return 1 + 2 + 3; }'), {
@@ -207,6 +209,7 @@ test('MIR Lowering', async (t) => {
             localCounter: 2,
             blockCounter: 1,
             argCount: 0,
+            returnType: 'i32',
         })
         assert.deepStrictEqual(
             lowerProg('fn main() { let a = 0; { let b = 1; } return a; }'),
@@ -288,6 +291,7 @@ test('MIR Lowering', async (t) => {
             localCounter: 4,
             blockCounter: 1,
             argCount: 0,
+            returnType: 'i32',
         })
         assert.deepStrictEqual(
             lowerProg('fn main() { let c = 42 == 43; return 0; }'),
@@ -307,44 +311,6 @@ test('MIR Lowering', async (t) => {
                 blocks: [
                     {
                         id: 0,
-                        statements: [],
-                        terminator: {
-                            kind: 'call',
-                            func: 'test',
-                            args: [],
-                            returnValue: {
-                                kind: 'local',
-                                id: 0,
-                            },
-                        },
-                    },
-                    {
-                        id: 1,
-                        statements: [],
-                        terminator: {
-                            kind: 'return',
-                            rvalue: {
-                                kind: 'use',
-                                place: {
-                                    kind: 'local',
-                                    id: 0,
-                                },
-                            },
-                        },
-                    },
-                ],
-                locals: [{ name: 'a', scope: 1, type: 'i32' }],
-                localCounter: 1,
-                blockCounter: 2,
-                argCount: 0,
-            })
-            // Test Function
-            funcMap.set('test', {
-                name: 'test',
-                entryBlockId: 0,
-                blocks: [
-                    {
-                        id: 0,
                         statements: [
                             {
                                 kind: 'assign',
@@ -357,6 +323,56 @@ test('MIR Lowering', async (t) => {
                             },
                         ],
                         terminator: {
+                            kind: 'call',
+                            func: 'test',
+                            args: [
+                                {
+                                    kind: 'use',
+                                    place: {
+                                        kind: 'local',
+                                        id: 0,
+                                    },
+                                },
+                            ],
+                            returnValue: {
+                                kind: 'local',
+                                id: 1,
+                            },
+                        },
+                    },
+                    {
+                        id: 1,
+                        statements: [],
+                        terminator: {
+                            kind: 'return',
+                            rvalue: {
+                                kind: 'use',
+                                place: {
+                                    kind: 'local',
+                                    id: 1,
+                                },
+                            },
+                        },
+                    },
+                ],
+                locals: [
+                    { scope: 1, type: 'i32' },
+                    { name: 'a', scope: 1, type: 'i32' },
+                ],
+                localCounter: 2,
+                blockCounter: 2,
+                argCount: 0,
+                returnType: 'i32',
+            })
+            // Test Function
+            funcMap.set('test', {
+                name: 'test',
+                entryBlockId: 0,
+                blocks: [
+                    {
+                        id: 0,
+                        statements: [],
+                        terminator: {
                             kind: 'return',
                             rvalue: {
                                 kind: 'use',
@@ -368,15 +384,18 @@ test('MIR Lowering', async (t) => {
                         },
                     },
                 ],
-                locals: [{ scope: 1, type: 'i32' }],
+                locals: [
+                    { name: 'arg0', scope: 1, type: 'i32' }, // arg0
+                ],
                 localCounter: 1,
                 blockCounter: 1,
-                argCount: 0,
+                argCount: 1,
+                returnType: 'i32',
             })
 
             assert.deepStrictEqual(
                 lowerProg(
-                    'fn test() {return 42;} fn main() { let a = test(); return a; }'
+                    'fn test(arg0: i32) {return arg0;} fn main() { let a = test(42); return a; }'
                 ),
                 {
                     functions: funcMap,

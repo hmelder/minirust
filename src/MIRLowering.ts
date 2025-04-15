@@ -19,6 +19,8 @@ import {
     BlockExprContext,
     IfExprContext,
     CallExprContext,
+    Function_param_patternContext,
+    Function_parametersContext,
     // Make sure to import *all* relevant contexts your visitor might encounter
 } from './parser/src/MiniRustParser'
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor'
@@ -181,6 +183,20 @@ export class MIRLowering
         const block = this.newBlock()
         this.startBlock(block.id)
 
+        // Set return type
+        const returnTypeCtx = ctx.function_return_type()
+        let returnType: MIR.Type = 'i32' // TODO: Change to unit
+        if (returnTypeCtx) {
+            returnType = returnTypeCtx.type().getText() as MIR.Type
+        }
+        this.currentFunc.returnType = returnType
+
+        // Visit function parameters
+        const paramCtx = ctx.function_parameters()
+        if (paramCtx) {
+            this.visit(paramCtx)
+        }
+
         // Visit statements
         const blockExpr = ctx.block_expression()
         const stmts = blockExpr.statement()
@@ -199,6 +215,17 @@ export class MIRLowering
 
         // Add function to program
         this.program.functions.set(name, this.currentFunc)
+        return undefined
+    }
+
+    visitFunction_param_pattern(ctx: Function_param_patternContext): undefined {
+        const name = ctx.IDENTIFIER().getText()
+        const type = ctx.type().getText() as MIR.Type
+
+        const place = this.newLocal(type)
+        this.currentFunc.locals[place.id].name = name
+        this.currentFunc.argCount += 1
+
         return undefined
     }
 

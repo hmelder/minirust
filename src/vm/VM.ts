@@ -14,9 +14,12 @@ export namespace VM {
         | 'EQ'
         | 'LT'
         // Memory Management
-        | 'ALLOCA'
+        // - Heap
         | 'MALLOC'
         | 'FREE'
+        // - Stack
+        | 'ALLOCA'
+        | 'FREEA'
         | 'MOV'
         | 'ASSIGN'
         | 'PUSH'
@@ -36,7 +39,7 @@ export namespace VM {
     export type MemoryLocation = 'S' | 'H'
 
     export interface AllocInstr {
-        opcode: 'ALLOCA' | 'MALLOC'
+        opcode: 'ALLOCA' | 'MALLOC' | 'FREEA'
         length: number // for malloc in bytes for alloca in words
     }
 
@@ -261,6 +264,10 @@ export namespace VM {
 
             ALLOCA: (instr: AllocInstr) => {
                 this.state.stack.alloca(instr.length * this.bytesPerSlot)
+                this.state.ip += 1
+            },
+            FREEA: (instr: AllocInstr) => {
+                this.state.stack.free(instr.length * this.bytesPerSlot)
                 this.state.ip += 1
             },
             ASSIGN: (instr: AssignInstr) => {

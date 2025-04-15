@@ -53,4 +53,14 @@ test('Type Checker Tests', async (t) => {
             assert.fail(e)
         }
     })
+    await t.test('evalutes simple function call with arguments', () => {
+        try {
+            const result = evaluate(
+                'fn test(arg0: i32) {return arg0;} fn main() { let a = test(42); return a;}'
+            )
+            assert.strictEqual(result, 42)
+        } catch (e) {
+            assert.fail(e)
+        }
+    })
 })

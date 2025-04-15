@@ -170,7 +170,7 @@ export class MiniRustParser extends antlr.Parser {
             this.state = 43;
             this.errorHandler.sync(this);
             _la = this.tokenStream.LA(1);
-            if (_la === 4 || _la === 5 || _la === 39) {
+            if (_la === 39) {
                 {
                 this.state = 42;
                 this.function_parameters();
@@ -253,7 +253,7 @@ export class MiniRustParser extends antlr.Parser {
             this.enterOuterAlt(localContext, 1);
             {
             this.state = 59;
-            this.pattern_no_top_alt();
+            this.match(MiniRustParser.IDENTIFIER);
             this.state = 60;
             this.match(MiniRustParser.COLON);
             this.state = 61;
@@ -1089,7 +1089,7 @@ export class MiniRustParser extends antlr.Parser {
         46,1,0,0,0,47,48,1,0,0,0,48,49,1,0,0,0,49,50,3,22,11,0,50,3,1,0,
         0,0,51,56,3,6,3,0,52,53,5,29,0,0,53,55,3,6,3,0,54,52,1,0,0,0,55,
         58,1,0,0,0,56,54,1,0,0,0,56,57,1,0,0,0,57,5,1,0,0,0,58,56,1,0,0,
-        0,59,60,3,26,13,0,60,61,5,27,0,0,61,62,3,24,12,0,62,7,1,0,0,0,63,
+        0,59,60,5,39,0,0,60,61,5,27,0,0,61,62,3,24,12,0,62,7,1,0,0,0,63,
         64,5,9,0,0,64,65,3,24,12,0,65,9,1,0,0,0,66,112,5,28,0,0,67,112,3,
         12,6,0,68,112,3,14,7,0,69,73,5,32,0,0,70,72,3,10,5,0,71,70,1,0,0,
         0,72,75,1,0,0,0,73,71,1,0,0,0,73,74,1,0,0,0,74,77,1,0,0,0,75,73,
@@ -1289,8 +1289,8 @@ export class Function_param_patternContext extends antlr.ParserRuleContext {
     public constructor(parent: antlr.ParserRuleContext | null, invokingState: number) {
         super(parent, invokingState);
     }
-    public pattern_no_top_alt(): Pattern_no_top_altContext {
-        return this.getRuleContext(0, Pattern_no_top_altContext)!;
+    public IDENTIFIER(): antlr.TerminalNode {
+        return this.getToken(MiniRustParser.IDENTIFIER, 0)!;
     }
     public COLON(): antlr.TerminalNode {
         return this.getToken(MiniRustParser.COLON, 0)!;

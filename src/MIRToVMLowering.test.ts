@@ -37,6 +37,7 @@ test('MIR to VM Lowering', async (t) => {
             localCounter: 1,
             blockCounter: 1,
             argCount: 0,
+            returnType: 'i32',
         })
 
         let exec = new MIRToVMLowering({
@@ -95,6 +96,7 @@ test('MIR to VM Lowering', async (t) => {
             localCounter: 1,
             blockCounter: 2,
             argCount: 0,
+            returnType: 'i32',
         })
         // Test Function
         funcMap.set('test', {
@@ -130,6 +132,7 @@ test('MIR to VM Lowering', async (t) => {
             localCounter: 1,
             blockCounter: 1,
             argCount: 0,
+            returnType: 'i32',
         })
 
         let exec = new MIRToVMLowering({

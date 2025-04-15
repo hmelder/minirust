@@ -149,8 +149,11 @@ export class MIRToVMLowering {
             const funcId = terminator.func
             const retPlace = terminator.returnValue
             const retType = func.locals[retPlace.id].type
-            // TODO: 1. Push arguments onto the stack
 
+            // 1. Push arguments in reverse onto the stack
+            for (let arg of terminator.args.reverse()) {
+                this.pushInstrs(this.lowerOperandToStack(arg, func))
+            }
             // 2. Allocate space for return value
             this.pushInstr({
                 opcode: 'ALLOCA',
@@ -168,6 +171,14 @@ export class MIRToVMLowering {
                 off: retPlace.id,
                 type: retType,
             })
+            // 5. Cleanup arguments from stack
+            // FIXME: This assumes that all args are 4 bytes
+            if (terminator.args.length !== 0) {
+                this.pushInstr({
+                    opcode: 'FREEA',
+                    length: terminator.args.length,
+                })
+            }
         }
     }
 
@@ -175,19 +186,39 @@ export class MIRToVMLowering {
         this.nextLocalId = 0
         const blockDirectory = new Map<MIR.BasicBlockId, number>()
 
-        // Create stack frame
+        // 1. Create stack frame
         const localsCounter = func.localCounter
         if (localsCounter !== 0) {
             this.pushInstr({ opcode: 'ALLOCA', length: localsCounter })
         }
 
+        // 2. Copy arguments from caller's stack into local stack frame
+        // Layout from FP
+        // -1: oldFP
+        // -2: returnIP
+        // -3: returnSlot
+        // -4: arg_0
+        // ...
+        let arg_start = -4
+        for (let i = 0; i < func.argCount; i++) {
+            const type = func.locals[i].type
+            this.pushInstr({
+                opcode: 'MOV',
+                srcOff: arg_start,
+                destOff: i,
+                type: type,
+            })
+            arg_start -= 1
+        }
+
+        // 3. Lower basic blocks
         const patchStart = this.ip
         for (let block of func.blocks) {
             blockDirectory.set(block.id, this.ip)
             this.lowerBasicBlock(func, block)
         }
 
-        // Patch up branches
+        // 3. Patch up branches
         for (let i = patchStart; i < this.instrs.length; i++) {
             const current = this.instrs[i]
             if (current.opcode === 'JUMPF') {

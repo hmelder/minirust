@@ -12,7 +12,7 @@ function_parameters:
     function_param_pattern (COMMA function_param_pattern)*;
 
 function_param_pattern:
-    pattern_no_top_alt COLON type;
+    IDENTIFIER COLON type;
 
 function_return_type:
     ARROW type;
