@@ -21,6 +21,7 @@ export namespace VM {
         | 'ASSIGN'
         | 'PUSH'
         | 'PUSHA'
+        | 'POPA'
         // Control
         | 'CALL'
         | 'JUMPF' // Implementation TBD/Simplified
@@ -42,6 +43,7 @@ export namespace VM {
     export interface CallInstr {
         opcode: 'CALL' | 'JUMPF'
         ip: number
+        patch?: string
     }
 
     export interface MovInstr {
@@ -63,6 +65,12 @@ export namespace VM {
         type: DataType
     }
 
+    export interface PopAInstr {
+        opcode: 'POPA'
+        off: number // dest off
+        type: DataType
+    }
+
     export interface AssignInstr {
         opcode: 'ASSIGN'
         off: number
@@ -81,6 +89,7 @@ export namespace VM {
         | NoArgInstr
         | PushInstr
         | PushAInstr
+        | PopAInstr
         | MovInstr
 
     /**
@@ -168,8 +177,26 @@ export namespace VM {
 
                 default:
                     throw new Error(`Unsupported type ${type} in instruction`)
-                    break
             }
+        }
+
+        private pop(type: DataType): number {
+            const stack = this.state.stack
+            let value: number
+            switch (type) {
+                case 'i32':
+                    value = stack.popInt32()
+                    break
+                case 'bool':
+                case 'u32':
+                    value = stack.popUint32()
+                    break
+
+                default:
+                    throw new Error(`Unsupported type ${type} in instruction`)
+            }
+
+            return value
         }
 
         private writeStack(value: Data, type: DataType, off: number) {
@@ -247,6 +274,11 @@ export namespace VM {
             PUSHA: (instr: PushAInstr) => {
                 const value = this.readStack(instr.type, instr.off)
                 this.push(value, instr.type)
+                this.state.ip += 1
+            },
+            POPA: (instr: PushAInstr) => {
+                const value = this.pop(instr.type)
+                this.writeStack(value, instr.type, instr.off)
                 this.state.ip += 1
             },
             MOV: (instr: MovInstr) => {

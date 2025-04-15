@@ -13,7 +13,7 @@ export class MIRToVMLowering {
         this.got = new Map<MIR.FuncId, number>()
         this.instrs = [
             { opcode: 'ALLOCA', length: 1 }, // Expect a return value from main
-            { opcode: 'CALL', ip: -1 },
+            { opcode: 'CALL', ip: -1, patch: 'main' },
             { opcode: 'HALT' },
         ]
         this.ip = 3
@@ -67,8 +67,20 @@ export class MIRToVMLowering {
 
         const addr = this.got.get('main')
 
-        // Patch call
-        this.instrs[1] = { opcode: 'CALL', ip: addr }
+        // Patch Calls
+        for (let i = 0; i < this.instrs.length; i++) {
+            const current = this.instrs[i]
+            if (current.opcode === 'CALL') {
+                if (!current.patch) {
+                    throw new Error(
+                        `Expected patch field in 'CALL' instruction IP=${i}`
+                    )
+                }
+                const ip = this.got.get(current.patch)
+
+                this.instrs[i] = { opcode: 'CALL', ip: ip }
+            }
+        }
 
         return this.instrs
     }
@@ -97,8 +109,8 @@ export class MIRToVMLowering {
             }
         }
 
-        const terminator = block.terminator
         // Lower terminator
+        const terminator = block.terminator
         if (terminator.kind === 'return') {
             if (terminator.rvalue) {
                 switch (terminator.rvalue.kind) {
@@ -132,6 +144,29 @@ export class MIRToVMLowering {
             this.pushInstr({
                 opcode: 'JUMPF',
                 ip: falseTarget,
+            })
+        } else if (terminator.kind === 'call') {
+            const funcId = terminator.func
+            const retPlace = terminator.returnValue
+            const retType = func.locals[retPlace.id].type
+            // TODO: 1. Push arguments onto the stack
+
+            // 2. Allocate space for return value
+            this.pushInstr({
+                opcode: 'ALLOCA',
+                length: 1,
+            })
+            // 3. Call target (must be patched up)
+            this.pushInstr({
+                opcode: 'CALL',
+                ip: -1,
+                patch: funcId,
+            })
+            // 4. Move result into local
+            this.pushInstr({
+                opcode: 'POPA',
+                off: retPlace.id,
+                type: retType,
             })
         }
     }
