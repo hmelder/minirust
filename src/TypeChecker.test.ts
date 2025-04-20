@@ -83,6 +83,9 @@ test('Type Checker Tests', async (t) => {
             fn add(a: i32, b: i32) {
                 return a + b;
             }
+            fn main() {
+
+            }
         `);
         assert.strictEqual(errors.length, 1); 
         assert.match(errors[0].message, /Function 'add' declared to return '\(\)', but body evaluates to 'i32'/);
@@ -93,6 +96,9 @@ test('Type Checker Tests', async (t) => {
         const [errors, visitor] = typeCheckProg(`
             fn add(a: i32, b: i32) -> i32 {
                 return a + b;
+            }
+            fn main() {
+                let result = add(1, 2);
             }
         `);
         assert.strictEqual(errors.length, 0); // Ensure no errors
@@ -128,6 +134,8 @@ test('Type Checker Tests', async (t) => {
         const [errors] = typeCheckProg(`
             fn add(a: i32, b: i32) -> i32 {
                 return true;
+            }
+            fn main() {
             }
         `);
 
@@ -276,5 +284,61 @@ test('Type Checker Tests', async (t) => {
     
         assert.strictEqual(errors.length, 1);
         assert.match(errors[0].message, /Use of undeclared variable 'sum'/);
+    });
+
+    await t.test('should handle block scoping', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let a: i32 = 10;
+                {
+                    let b: i32 = a;
+                }
+                let c: i32 = b; // 'b' is not accessible here
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Use of undeclared variable 'b'/);
+    });
+
+    await t.test('should handle shadowing across scopes', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let a: i32 = 10;
+                {
+                    let a: bool = true; // Shadows outer 'a'
+                    {
+                        let a: i32 = 20; // Shadows inner 'a'
+                        let b: i32 = a; // Refers to innermost 'a'
+                    }
+                }
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 0); // Ensure no errors
+    });
+
+    await t.test('should report error for variable declared in global scope', () => {
+        const [errors] = typeCheckProg(`
+            let a: i32 = 10; 
+            fn main() {
+                return a;
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /All statements and expressions must be inside functions./);
+    });
+
+    await t.test('should report error for variable declared in global scope', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                return 10;
+            }
+            let a: i32 = 10; 
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /All statements and expressions must be inside functions./);
     });
 })

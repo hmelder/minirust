@@ -1,5 +1,5 @@
 // typechecker.ts
-import { ParseTreeVisitor, AbstractParseTreeVisitor } from 'antlr4ng'
+import { ParseTreeVisitor, AbstractParseTreeVisitor, ErrorNode } from 'antlr4ng'
 import {
     ProgContext,
     FunctionContext,
@@ -10,7 +10,7 @@ import {
     Literal_expressionContext,
     Path_expressionContext,
     Block_expressionContext,
-    TypeContext, // Context for type annotations like ': u32'
+    TypeContext, 
     IntLiteralContext,
     BoolLiteralContext,
     IfExprContext,
@@ -36,6 +36,7 @@ export class TypeChecker
     // Symbol Table: Maps variable names to their types
     // Simple version: single scope. Add scoping for blocks/functions later.
     // private symbolTable: Map<string, MiniRustType> = new Map()
+
     private symbolTableStack: Map<string, MiniRustType>[] = [new Map()];
     private errors: TypeError[] = []
 
@@ -69,21 +70,6 @@ export class TypeChecker
         this.visitExpression(ctx)
         return this.errors
     }
-
-    // Default result for unhandled nodes (should ideally be covered)
-    /*
-    protected defaultResult(): MiniRustType {
-        console.warn('TypeChecker: Visiting unhandled node type.')
-        return PrimitiveType.Error // Or Unknown? Error prevents cascade issues better.
-    }*/
-
-    // Aggregate results (not strictly needed if returning single type)
-    // protected aggregateResult(aggregate: MiniRustType, nextResult: MiniRustType): MiniRustType {
-    //     // Handle aggregation if necessary, e.g., if checking sequences
-    //     return nextResult; // Often, the last result is relevant
-    // }
-
-    // --- Helper Methods ---
 
     private addError(
         message: string,
@@ -128,23 +114,43 @@ export class TypeChecker
     // --- Visitor Implementations ---
     visitProg(ctx: ProgContext): MiniRustType {
         this.enterScope();
-
-        for (const functionCtx of ctx.function_()) {
-            const functionName = functionCtx.IDENTIFIER().getText();
     
-            if (functionName === 'main') {
-                // Special handling for `main`
-                console.log(`visitProg: Processing 'main' function`);
-                this.handleMainFunction(functionCtx);
-            } else {
-                // Process other functions normally
-                this.visitFunction(functionCtx);
+        let hasMain = false;
+        // Check for any top-level statements — not allowed
+        for (const child of ctx.children) {
+            if (child instanceof ErrorNode) {
+                this.addError(`All statements and expressions must be inside functions.`, child);
+                return PrimitiveType.Error;
             }
         }
 
+        const functions = ctx.function_();
+        if (functions.length === 0) {
+            this.addError(`All statements and expressions must be inside functions.`, ctx);
+            return PrimitiveType.Error;
+        }
+
+        for (const functionCtx of ctx.function_()) {
+            const functionName = functionCtx.IDENTIFIER().getText();
+            
+            if (functionName === 'main') {
+                hasMain = true;
+                console.log(`visitProg: Processing 'main' function`);
+                this.handleMainFunction(functionCtx);
+            } else {
+                this.visitFunction(functionCtx);
+            }
+        }
+    
         this.exitScope();
-        return PrimitiveType.Unit; // The program itself has no type
+    
+        if (!hasMain) {
+            this.addError(`Missing required 'main' function.`, ctx);
+        }
+    
+        return PrimitiveType.Unit;
     }
+    
     
     // Special handling for the `main` function
     private handleMainFunction(ctx: FunctionContext): void {
@@ -598,10 +604,7 @@ export class TypeChecker
     
         // Visit the function body
         const blockCtx = ctx.block_expression();
-        if (blockCtx) {
-            // Save current symbol table to restore after function processing
-            const previousSymbolTable = new Map(this.symbolTable);
-            
+        if (blockCtx) {            
             // Add parameters to symbol table
             if (paramsCtx) {
                 paramsCtx.function_param_pattern().forEach((paramCtx, index) => {
@@ -621,8 +624,6 @@ export class TypeChecker
                     blockCtx
                 );
             }
-            
-            this.symbolTable = previousSymbolTable;
         }
 
         this.exitScope();
