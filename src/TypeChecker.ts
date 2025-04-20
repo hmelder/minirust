@@ -20,7 +20,9 @@ import {
     PathExprContext,
     CallExprContext,
     BinOpExprContext,
-    RetExprContext
+    RetExprContext,
+    ExprStmtContext,
+    Expression_statementContext
 } from './parser/src/MiniRustParser' // Adjust path
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor' // Adjust path
 import { MiniRustType, PrimitiveType, isNumeric, typesEqual, FunctionType } from './types'
@@ -122,13 +124,35 @@ export class TypeChecker
     private handleMainFunction(ctx: FunctionContext): void {
         console.log(`handleMainFunction: Processing 'main' function`);
     
-        // Visit the body of `main`
+        // Check declared return type (must be omitted or explicitly `-> ()`)
+        // const returnTypeCtx = ctx.function_return_type()?.type();
+        // if (returnTypeCtx) {
+        //     const declaredReturnType = this.getTypeFromContext(returnTypeCtx);
+        //     if (declaredReturnType !== PrimitiveType.Unit) {
+        //         this.addError(
+        //             `The 'main' function must return '()', but declared return type is '${declaredReturnType}'`,
+        //             returnTypeCtx
+        //         );
+        //     }
+        // }
+    
+        // Visit and type-check the function body
         const blockCtx = ctx.block_expression();
         if (blockCtx) {
             this.visitExpression(blockCtx);
             console.log("block context: ", blockCtx.constructor.name);
+            // const actualReturnType = this.visitExpression(blockCtx);
+            // console.log("block context type: ", actualReturnType);
+    
+            // if (actualReturnType !== PrimitiveType.Unit) {
+            //     this.addError(
+            //         `The 'main' function must return '()', but its body evaluates to '${actualReturnType}'`,
+            //         blockCtx
+            //     );
+            // }
         }
     }
+    
 
     visitLet_statement(ctx: Let_statementContext): MiniRustType {
         const identNode = ctx.IDENTIFIER()
@@ -239,7 +263,9 @@ export class TypeChecker
                 if (expr) {
                     resultType = this.visitExpression(expr);
                 }
-            } 
+            } else if (stmt instanceof ExprStmtContext) {
+                resultType = this.visitExpression(stmt);
+            }  
             else if (stmt instanceof IfExprContext) {
                 resultType = this.visitExpression(stmt);
             } 
@@ -268,9 +294,12 @@ export class TypeChecker
         const leftExpr = ctx.expression(0)
         const rightExpr = ctx.expression(1)
         const op = ctx._op?.text ?? '<unknown op>' // Get operator symbol
-
-        const leftType = this.visit(leftExpr)
-        const rightType = this.visit(rightExpr)
+        const leftType = this.visitExpression(leftExpr)
+        console.log("Left name:", leftExpr.constructor.name);
+        console.log("Left type:", leftType);
+        const rightType = this.visitExpression(rightExpr)
+        console.log("Right name:", rightExpr.constructor.name);
+        console.log("Right type:", rightType);
 
         // If either operand had an error, propagate it
         if (
@@ -372,8 +401,8 @@ export class TypeChecker
     }
 
     visitLiteral_expression(ctx: Literal_expressionContext): MiniRustType {
+
         const literalText = ctx.getText();
-    
         if (ctx instanceof IntLiteralContext) {
             if (literalText.endsWith('u32')) {
                 return PrimitiveType.U32;
@@ -445,6 +474,18 @@ export class TypeChecker
         return returnValType // Or Error if mismatch occurred
     }
 
+    visitExprStmt(ctx: Expression_statementContext): MiniRustType {
+        const expr = ctx.expression();
+        if (!expr) {
+            // Invalid expression — likely a parsing issue
+            this.addError("Empty expression statement", ctx);
+            return PrimitiveType.Error;
+        }
+        
+        // Evaluate the expression normally
+        return this.visitExpression(expr);
+    }
+
     // Override visitExpression to delegate correctly based on actual context type
     // This prevents infinite loops if rules are recursive (e.g., expression: expression op expression)
     visitExpression(ctx: ExpressionContext): MiniRustType {
@@ -465,17 +506,15 @@ export class TypeChecker
         } else if (ctx instanceof RetExprContext) {
             return this.visitRetExpr(ctx)
         } else if (ctx instanceof BlockExprContext) {
-            // Check for your Identifier usage context
             return this.visitBlock_expression(ctx)
         } else if (ctx instanceof Block_expressionContext) {
-            // Check for your Identifier usage context
             return this.visitBlock_expression(ctx)
         } else if (ctx instanceof IfExprContext) {
-            // Check for your Identifier usage context
             return this.visitIfExpr(ctx)
         } else if (ctx instanceof PathExprContext) {
-            // Check for your Identifier usage context
             return this.visitPath_expression(ctx.path_expression())
+        } else if (ctx instanceof ExprStmtContext) {
+            return this.visitExprStmt(ctx.expression_statement())
         }
         // Add other expression types (parentheses, unary, calls, etc.)
 
@@ -612,7 +651,14 @@ export class TypeChecker
         const statements = ctx.statement();
         
         const mid = Math.floor(statements.length / 2); // crude split between then/else
-    
+        
+        if (mid === 0) {
+            const expr = ctx.expression(1); 
+            if (expr) {
+                return this.visitExpression(expr);
+            }
+        }
+
         // Visit 'then' statements
         let thenType: MiniRustType = PrimitiveType.Unit;
         for (let i = 0; i < mid; i++) {
@@ -625,6 +671,8 @@ export class TypeChecker
                 if (expr) {
                     thenType = this.visitExpression(expr);
                 }
+            } else if (stmt instanceof ExprStmtContext) {
+                thenType = this.visitExpression(stmt);
             } 
             this.visitExpression(stmt);
             console.log("thentype:", thenType);
@@ -642,6 +690,8 @@ export class TypeChecker
                 if (expr) {
                     elseType = this.visitExpression(expr);
                 }
+            } else if (stmt instanceof ExprStmtContext) {
+                elseType = this.visitExpression(stmt);
             } 
             this.visitExpression(stmt);
             console.log("elsetype:", elseType);

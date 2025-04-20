@@ -23,35 +23,42 @@ function typeCheckProg(input: string): [TypeError[], TypeChecker] {
 
 test('Type Checker Tests', async (t) => {
     await t.test('should infer type for let statement', () => {
-        const [errors, visitor] = typeCheckProg('fn main() { let a = 1; return a; }')
+        const [errors, visitor] = typeCheckProg('fn main() { let a = 1; }')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
+    })
+
+    await t.test('should return error when assign negative value in type u32', () => {
+        const [errors, visitor] = typeCheckProg('fn main() { let a:u32 = -1; }')
+        const symbolTable = visitor.getSymbolTable()
+        assert.strictEqual(errors.length, 1)
+        assert.match(errors[0].message, /Mismatched types: expected 'u32', found 'i32'/); 
     })
 
     await t.test('type check let statement', () => {
-        const [errors, visitor] = typeCheckProg('fn main() { let a:i32 = 1; return a; }')
+        const [errors, visitor] = typeCheckProg('fn main() { let a:i32 = 1; }')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     })
 
     await t.test('should infer type for let statement', () => {
-        const [errors, visitor] = typeCheckProg('fn main() { let a:bool = true; return a; }')
+        const [errors, visitor] = typeCheckProg('fn main() { let a:bool = true; }')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
-    })
+    })    
 
     await t.test('should infer type for let statement', () => {
-        const [errors, visitor] = typeCheckProg('fn main() { let a = false; return a; }')
+        const [errors, visitor] = typeCheckProg('fn main() { let a = false;  }')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
     })
 
     await t.test('should not assign i32 into bool', () => {
-        const [errors, visitor] = typeCheckProg('fn main() { let a:bool = 10; return a; }')
+        const [errors, visitor] = typeCheckProg('fn main() { let a:bool = 10; }')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 1); // Ensure one error is reported
         assert.match(errors[0].message, /Cannot assign value of type 'i32' to boolean variable 'a'. Only 'true' or 'false' are allowed./); // Check error message
@@ -89,6 +96,18 @@ test('Type Checker Tests', async (t) => {
         assert.strictEqual(symbolTable.get('c'), PrimitiveType.I32)
     })
     
+    await t.test('function without return type will return primitive.Unit', () => {
+        const [errors, visitor] = typeCheckProg(`
+            fn add(a: i32, b: i32) {
+                return a + b;
+            }
+        `);
+        const symbolTable = visitor.getSymbolTable();
+        assert.strictEqual(errors.length, 1); 
+        assert.match(errors[0].message, /Function 'add' declared to return '\(\)', but body evaluates to 'i32'/);
+        
+    });
+
     await t.test('should handle function declaration with parameters and return type', () => {
         const [errors, visitor] = typeCheckProg(`
             fn add(a: i32, b: i32) -> i32 {
@@ -108,7 +127,7 @@ test('Type Checker Tests', async (t) => {
     await t.test('should handle function call with correct arguments', () => {
         const [errors, visitor] = typeCheckProg(`
             fn add(a: i32, b: i32) -> i32 {
-                return a + b;
+                a + b
             }
             fn main() {
                 let result = add(1, 2);
@@ -146,8 +165,12 @@ test('Type Checker Tests', async (t) => {
     await t.test('should return correct type if true', () => {
         const [errors, visitor] = typeCheckProg(`
             fn add(a: i32, b: i32) -> i32 {
-                if (true) {return 10;}
-                else {return 11;}
+                if (true) { 
+                    return a;
+                }
+                else { 
+                    return b;  
+                }
             }
             fn main() {
                 let result = add(1, 2);
@@ -155,7 +178,6 @@ test('Type Checker Tests', async (t) => {
         `);
         const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 0); 
-
         assert.strictEqual(symbolTable.get('result'), PrimitiveType.I32)
     }); 
 
@@ -184,11 +206,42 @@ test('Type Checker Tests', async (t) => {
                 let result = add(1, 2);
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 3); 
         assert.match(errors[0].message, /Mismatched types in 'if' branches: 'then' is 'i32', 'else' is 'bool'/); // Check error message
         assert.match(errors[1].message, /Mismatched types in 'if' branches: 'then' is 'i32', 'else' is 'bool'/); // Check error message
         assert.match(errors[2].message, /Function 'add' declared to return 'bool', but body evaluates to '<error>/); // Check error message
+    }); 
 
+    // await t.test('main should not return anything', () => {
+    //     const [errors, visitor] = typeCheckProg(`
+    //         fn main() {
+    //             return 1;
+    //         }
+    //     `);
+    //     assert.strictEqual(errors.length, 1); 
+    //     assert.match(errors[0].message, /The 'main' function must return '\(\)', but its body evaluates to 'i32'/); // Check error message
+    // }); 
+
+    // await t.test('should allow undeclared type binary operation', () => {
+    //     const [errors, visitor] = typeCheckProg('fn main() { let a:i32 = 1 + 1; }')
+    //     const symbolTable = visitor.getSymbolTable()
+    //     assert.strictEqual(errors.length, 0)
+
+    //     assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
+    // })
+
+    await t.test('main should not return anything', () => {
+        const [errors, visitor] = typeCheckProg(`
+            fn returnTwo() -> i32 {
+                return 1 + 1;
+            }
+            fn main() {
+                let a = returnTwo()
+            }
+        `);
+        const symbolTable = visitor.getSymbolTable();
+
+        assert.strictEqual(errors.length, 0); 
+        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     }); 
 })
