@@ -125,7 +125,8 @@ export class TypeChecker
         // Visit the body of `main`
         const blockCtx = ctx.block_expression();
         if (blockCtx) {
-            this.visit(blockCtx); // Directly visit the block expression
+            this.visitExpression(blockCtx);
+            console.log("block context: ", blockCtx.constructor.name);
         }
     }
 
@@ -226,23 +227,37 @@ export class TypeChecker
     }
 
     visitBlock_expression(ctx: Block_expressionContext): MiniRustType {
+        const statements = ctx.statement();
+        let resultType: MiniRustType = PrimitiveType.Unit;
+
         // Process all statements in the block
-        for (const statementCtx of ctx.statement()) {
-            console.log(statementCtx.constructor.name);
-            this.visitExpression(statementCtx);
+        for (const stmt of statements) {
+            if (stmt instanceof SemiStmtContext) {
+                continue;
+            } else if (stmt instanceof RetExprContext) {
+                const expr = stmt.expression();
+                if (expr) {
+                    resultType = this.visitExpression(expr);
+                }
+            } 
+            else if (stmt instanceof IfExprContext) {
+                resultType = this.visitExpression(stmt);
+            } 
+            this.visitExpression(stmt);
         }
         
         // If there's a final expression (for implicit return)
-        const finalExpr = ctx.expression();
-        if (finalExpr) {
-            return this.visitExpression(finalExpr);
-        }
-        
-        return PrimitiveType.Unit;
+        // const finalExpr = ctx.expression();
+        // console.log("final:", finalExpr?.constructor.name);
+        // if (finalExpr) {
+        //     return this.visitExpression(finalExpr);
+        // }
+        console.log("Return block type:", resultType);
+        return resultType;
     }
 
     visitSemiStmt(ctx: SemiStmtContext): MiniRustType {
-        this.visitChildren(ctx); // If it has an expression inside, process it
+        this.visitChildren(ctx);
         return PrimitiveType.Unit;
     }
     
@@ -409,7 +424,7 @@ export class TypeChecker
         // --- Check against expected function return type ---
         // For now, assume the implicit "main" function expects i32
         // FIXME
-        const expectedReturnType = PrimitiveType.I32
+        // const expectedReturnType = PrimitiveType.I32
 
 
         if (returnValType === PrimitiveType.Error) {
@@ -417,13 +432,13 @@ export class TypeChecker
             return PrimitiveType.Error // Propagate
         }
 
-        if (!typesEqual(returnValType, expectedReturnType)) {
-            this.addError(
-                `Mismatched return type: expected '${expectedReturnType}', found '${returnValType}'`,
-                exprCtx ?? ctx
-            )
-            return PrimitiveType.Error
-        }
+        // if (!typesEqual(returnValType, expectedReturnType)) {
+        //     this.addError(
+        //         `Mismatched return type: expected '${expectedReturnType}', found '${returnValType}'`,
+        //         exprCtx ?? ctx
+        //     )
+        //     return PrimitiveType.Error
+        // }
 
         // The 'return' expression itself doesn't really have a value type accessible
         // after it, often considered 'Never' type (!). Returning Unit or Error is practical.
@@ -532,7 +547,15 @@ export class TypeChecker
     
             // Process the function body - this is crucial
             console.log(`Name: '${blockCtx.constructor.name}'`);
+            // Process the function body and check return type
             const bodyType = this.visitExpression(blockCtx);
+            console.log("Body Type:", bodyType);
+            if (!typesEqual(bodyType, returnType)) {
+                this.addError(
+                    `Function '${functionName}' declared to return '${returnType}', but body evaluates to '${bodyType}'`,
+                    blockCtx
+                );
+            }
             
             this.symbolTable = previousSymbolTable;
         }
@@ -544,7 +567,7 @@ export class TypeChecker
         const pathExpr = ctx.path_expression();
         const functionName = pathExpr.IDENTIFIER().getText(); // Access IDENTIFIER from path_expression
         const fnType = this.symbolTable.get(functionName);
-    
+        
         if (!fnType || fnType.kind !== 'function') {
             this.addError(`Call to undefined or non-function '${functionName}'`, ctx);
             return PrimitiveType.Error;
@@ -595,7 +618,15 @@ export class TypeChecker
         for (let i = 0; i < mid; i++) {
             const stmt = statements[i];
             console.log("Now running if statement:",stmt.constructor.name);
-            thenType = this.visitExpression(stmt);
+            if (stmt instanceof SemiStmtContext) {
+                continue;
+            } else if (stmt instanceof RetExprContext) {
+                const expr = stmt.expression();
+                if (expr) {
+                    thenType = this.visitExpression(expr);
+                }
+            } 
+            this.visitExpression(stmt);
             console.log("thentype:", thenType);
         }
     
@@ -604,7 +635,15 @@ export class TypeChecker
         for (let i = mid; i < statements.length; i++) {
             const stmt = statements[i];
             console.log("Now running then statement:",stmt.constructor.name);
-            elseType = this.visitExpression(stmt);
+            if (stmt instanceof SemiStmtContext) {
+                continue;
+            } else if (stmt instanceof RetExprContext) {
+                const expr = stmt.expression();
+                if (expr) {
+                    elseType = this.visitExpression(expr);
+                }
+            } 
+            this.visitExpression(stmt);
             console.log("elsetype:", elseType);
         }
     
@@ -615,7 +654,8 @@ export class TypeChecker
             );
             return PrimitiveType.Error;
         }
-    
+        
+        console.log("Final type:", thenType);
         return thenType;
     }
     

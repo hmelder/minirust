@@ -36,20 +36,19 @@ test('Type Checker Tests', async (t) => {
         assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     })
 
-    // await t.test('should infer type for let statement', () => {
-    //     const [errors, visitor] = typeCheckProg('fn main() { let a:bool = true; return a; }')
-    //     const symbolTable = visitor.getSymbolTable()
-    //     assert.strictEqual(errors.length, 0)
-    //     assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
-    // })
+    await t.test('should infer type for let statement', () => {
+        const [errors, visitor] = typeCheckProg('fn main() { let a:bool = true; return a; }')
+        const symbolTable = visitor.getSymbolTable()
+        assert.strictEqual(errors.length, 0)
+        assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
+    })
 
-    // await t.test('should infer type for let statement', () => {
-    //     const [errors, visitor] = typeCheckProg('fn main() { let a = false; return a; }')
-    //     const symbolTable = visitor.getSymbolTable()
-    //     assert.strictEqual(errors.length, 1)
-    //     assert.match(errors[0].message, /Mismatched types: expected 'bool', found 'i32'/);
-    //     assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
-    // })
+    await t.test('should infer type for let statement', () => {
+        const [errors, visitor] = typeCheckProg('fn main() { let a = false; return a; }')
+        const symbolTable = visitor.getSymbolTable()
+        assert.strictEqual(errors.length, 0)
+        assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
+    })
 
     await t.test('should not assign i32 into bool', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:bool = 10; return a; }')
@@ -98,6 +97,7 @@ test('Type Checker Tests', async (t) => {
         `);
         const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 0); // Ensure no errors
+
         const addFunction = symbolTable.get('add');
         assert.ok(addFunction); // Ensure the function is in the symbol table
         assert.strictEqual(addFunction.kind, 'function'); // Ensure it's a function type
@@ -140,21 +140,26 @@ test('Type Checker Tests', async (t) => {
         `);
 
         assert.strictEqual(errors.length, 1); // Ensure one error is reported
-        assert.match(errors[0].message, /Mismatched return type: expected 'i32', found 'bool'/); // Check error message
+        assert.match(errors[0].message, /Function 'add' declared to return 'i32', but body evaluates to 'bool'/); // Check error message
     });   
 
-    await t.test('should report error for function with mismatched return type', () => {
-        const [errors] = typeCheckProg(`
+    await t.test('should return correct type if true', () => {
+        const [errors, visitor] = typeCheckProg(`
             fn add(a: i32, b: i32) -> i32 {
-                return true;
+                if (true) {return 10;}
+                else {return 11;}
+            }
+            fn main() {
+                let result = add(1, 2);
             }
         `);
+        const symbolTable = visitor.getSymbolTable();
+        assert.strictEqual(errors.length, 0); 
 
-        assert.strictEqual(errors.length, 1); // Ensure one error is reported
-        assert.match(errors[0].message, /Mismatched return type: expected 'i32', found 'bool'/); // Check error message
-    });  
+        assert.strictEqual(symbolTable.get('result'), PrimitiveType.I32)
+    }); 
 
-    await t.test('should return 10 if true', () => {
+    await t.test('should return error if type mismatch', () => {
         const [errors, visitor] = typeCheckProg(`
             fn add(a: i32, b: i32) -> bool {
                 if (true) {return 10;}
@@ -165,8 +170,25 @@ test('Type Checker Tests', async (t) => {
             }
         `);
         const symbolTable = visitor.getSymbolTable();
-        assert.strictEqual(errors.length, 0); // Ensure one error is reported
+        assert.strictEqual(errors.length, 1); 
+        assert.match(errors[0].message, /Function 'add' declared to return 'bool', but body evaluates to 'i32'/); // Check error message
+    }); 
 
-        assert.strictEqual(symbolTable.get('result'), PrimitiveType.Bool)
+    await t.test('should return error if type mismatch', () => {
+        const [errors, visitor] = typeCheckProg(`
+            fn add(a: i32, b: i32) -> bool {
+                if (true) {return 10;}
+                else {return true;}
+            }
+            fn main() {
+                let result = add(1, 2);
+            }
+        `);
+        const symbolTable = visitor.getSymbolTable();
+        assert.strictEqual(errors.length, 3); 
+        assert.match(errors[0].message, /Mismatched types in 'if' branches: 'then' is 'i32', 'else' is 'bool'/); // Check error message
+        assert.match(errors[1].message, /Mismatched types in 'if' branches: 'then' is 'i32', 'else' is 'bool'/); // Check error message
+        assert.match(errors[2].message, /Function 'add' declared to return 'bool', but body evaluates to '<error>/); // Check error message
+
     }); 
 })
