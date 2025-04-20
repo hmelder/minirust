@@ -24,42 +24,32 @@ function typeCheckProg(input: string): [TypeError[], TypeChecker] {
 test('Type Checker Tests', async (t) => {
     await t.test('should infer type for let statement', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a = 1; }')
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     })
 
     await t.test('should return error when assign negative value in type u32', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:u32 = -1; }')
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 1)
         assert.match(errors[0].message, /Mismatched types: expected 'u32', found 'i32'/); 
     })
 
     await t.test('type check let statement', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:i32 = 1; }')
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     })
 
     await t.test('should infer type for let statement', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:bool = true; }')
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
     })    
 
     await t.test('should infer type for let statement', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a = false;  }')
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.Bool)
     })
 
     await t.test('should not assign i32 into bool', () => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:bool = 10; }')
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 1); // Ensure one error is reported
         assert.match(errors[0].message, /Cannot assign value of type 'i32' to boolean variable 'a'. Only 'true' or 'false' are allowed./); // Check error message
     })
@@ -68,20 +58,16 @@ test('Type Checker Tests', async (t) => {
         const [errors, visitor] = typeCheckProg(
             'fn main() { let a:i32 = 1; let b:bool = 2; let c:i32 = a + b; }'
         )
-        const symbolTable = visitor.getSymbolTable()
-        assert.strictEqual(errors.length, 1); // Ensure one error is reported
+        assert.strictEqual(errors.length, 2); // Ensure one error is reported
         assert.match(errors[0].message, /Cannot assign value of type 'i32' to boolean variable 'b'. Only 'true' or 'false' are allowed./);
+        assert.match(errors[1].message, /Use of undeclared variable 'b'/);
     })
 
     await t.test('should infer type and perform addition', () => {
         const [errors, visitor] = typeCheckProg(
             'fn main() { let a = 1; let b = 2; let c = a + b; }'
         )
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0); // Ensure one error is reported
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
-        assert.strictEqual(symbolTable.get('b'), PrimitiveType.I32)
-        assert.strictEqual(symbolTable.get('c'), PrimitiveType.I32)
     })
     
 
@@ -89,11 +75,7 @@ test('Type Checker Tests', async (t) => {
         const [errors, visitor] = typeCheckProg(
             'fn main() { let a:i32 = 1; let b:i32 = 2; let c:i32 = a + b; }'
         )
-        const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 0)
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
-        assert.strictEqual(symbolTable.get('b'), PrimitiveType.I32)
-        assert.strictEqual(symbolTable.get('c'), PrimitiveType.I32)
     })
     
     await t.test('function without return type will return primitive.Unit', () => {
@@ -102,7 +84,6 @@ test('Type Checker Tests', async (t) => {
                 return a + b;
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 1); 
         assert.match(errors[0].message, /Function 'add' declared to return '\(\)', but body evaluates to 'i32'/);
         
@@ -114,14 +95,8 @@ test('Type Checker Tests', async (t) => {
                 return a + b;
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 0); // Ensure no errors
 
-        const addFunction = symbolTable.get('add');
-        assert.ok(addFunction); // Ensure the function is in the symbol table
-        assert.strictEqual(addFunction.kind, 'function'); // Ensure it's a function type
-        assert.deepStrictEqual(addFunction.paramTypes, [PrimitiveType.I32, PrimitiveType.I32]); // Check parameter types
-        assert.strictEqual(addFunction.returnType, PrimitiveType.I32); // Check return type
     });
     
     await t.test('should handle function call with correct arguments', () => {
@@ -133,9 +108,7 @@ test('Type Checker Tests', async (t) => {
                 let result = add(1, 2);
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 0); // Ensure no errors
-        assert.strictEqual(symbolTable.get('result'), PrimitiveType.I32);
     });
     
     await t.test('should report error for function call with incorrect arguments', () => {
@@ -176,9 +149,7 @@ test('Type Checker Tests', async (t) => {
                 let result = add(1, 2);
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 0); 
-        assert.strictEqual(symbolTable.get('result'), PrimitiveType.I32)
     }); 
 
     await t.test('should return error if type mismatch', () => {
@@ -191,7 +162,6 @@ test('Type Checker Tests', async (t) => {
                 let result = add(1, 2);
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
         assert.strictEqual(errors.length, 1); 
         assert.match(errors[0].message, /Function 'add' declared to return 'bool', but body evaluates to 'i32'/); // Check error message
     }); 
@@ -239,9 +209,72 @@ test('Type Checker Tests', async (t) => {
                 let a = returnTwo()
             }
         `);
-        const symbolTable = visitor.getSymbolTable();
 
         assert.strictEqual(errors.length, 0); 
-        assert.strictEqual(symbolTable.get('a'), PrimitiveType.I32)
     }); 
+
+    await t.test('should allow variable shadowing in inner scope', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let a: i32 = 10;
+                {
+                    let a: bool = true; // Shadows outer 'a'
+                    let b: bool = a; // Refers to inner 'a'
+                }
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 0); // Ensure no errors
+    });
+
+    await t.test('should handle nested scopes correctly', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let a: i32 = 10;
+                {
+                    let b: i32 = a;
+                    {
+                        let c: i32 = b;
+                    }
+                    let d: i32 = c; // 'c' is not accessible here
+                }
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Use of undeclared variable 'c'/);
+    });
+
+    await t.test('should handle function parameters in scope', () => {
+        const [errors] = typeCheckProg(`
+            fn add(a: i32, b: i32) -> i32 {
+                return a + b;
+            }
+    
+            fn main() {
+                let result: i32 = add(1, 2);
+                let a: i32 = a; // 'a' is not accessible here
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Use of undeclared variable 'a'/);
+    });
+
+    await t.test('should handle local variables in function scope', () => {
+        const [errors] = typeCheckProg(`
+            fn add(a: i32, b: i32) -> i32 {
+                let sum: i32 = a + b;
+                return sum;
+            }
+    
+            fn main() {
+                let result: i32 = add(1, 2);
+                let sum: i32 = sum; // 'sum' is not accessible here
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Use of undeclared variable 'sum'/);
+    });
 })

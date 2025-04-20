@@ -35,17 +35,39 @@ export class TypeChecker
 {
     // Symbol Table: Maps variable names to their types
     // Simple version: single scope. Add scoping for blocks/functions later.
-    private symbolTable: Map<string, MiniRustType> = new Map()
+    // private symbolTable: Map<string, MiniRustType> = new Map()
+    private symbolTableStack: Map<string, MiniRustType>[] = [new Map()];
     private errors: TypeError[] = []
+
+    private enterScope(): void {
+        this.symbolTableStack.push(new Map());
+        console.log('Entered new scope');
+    }
+    
+    private exitScope(): void {
+        this.symbolTableStack.pop();
+        console.log('Exited scope');
+    }
+    
+    private currentScope(): Map<string, MiniRustType> {
+        return this.symbolTableStack[this.symbolTableStack.length - 1];
+    }
+    
+    private lookupSymbol(name: string): MiniRustType | undefined {
+        // Search from the current scope outward
+        for (let i = this.symbolTableStack.length - 1; i >= 0; i--) {
+            const scope = this.symbolTableStack[i];
+            if (scope.has(name)) {
+                return scope.get(name);
+            }
+        }
+        return undefined; // Not found
+    }
 
     // --- Entry Point ---
     public check(ctx: ProgContext): TypeError[] {
         this.visitExpression(ctx)
         return this.errors
-    }
-
-    public getSymbolTable(): Map<string, MiniRustType> {
-        return this.symbolTable
     }
 
     // Default result for unhandled nodes (should ideally be covered)
@@ -105,6 +127,8 @@ export class TypeChecker
 
     // --- Visitor Implementations ---
     visitProg(ctx: ProgContext): MiniRustType {
+        this.enterScope();
+
         for (const functionCtx of ctx.function_()) {
             const functionName = functionCtx.IDENTIFIER().getText();
     
@@ -117,6 +141,8 @@ export class TypeChecker
                 this.visitFunction(functionCtx);
             }
         }
+
+        this.exitScope();
         return PrimitiveType.Unit; // The program itself has no type
     }
     
@@ -163,12 +189,12 @@ export class TypeChecker
             return PrimitiveType.Error
         }
 
-        // Check for redeclaration in the same scope (simple check)
-        if (this.symbolTable.has(identName)) {
-            this.addError(
-                `Identifier '${identName}' already declared in this scope.`,
-                identNode!
-            )
+        const currentScope = this.currentScope();
+
+        // Check for redeclaration in the same scope
+        if (currentScope.has(identName)) {
+            this.addError(`Identifier '${identName}' already declared in this scope.`, identNode!);
+            return PrimitiveType.Error;
         }
 
         let declaredType: MiniRustType | null = null
@@ -241,16 +267,14 @@ export class TypeChecker
         // 4. Add to symbol table (even if error, to potentially reduce cascade errors)
         // Only add non-error types definitively.
         if (finalType !== PrimitiveType.Error) {
-            this.symbolTable.set(identName, finalType)
-        } else if (!this.symbolTable.has(identName)) {
-            // Add error type if not already declared to avoid 'undeclared' errors later
-            this.symbolTable.set(identName, PrimitiveType.Error)
-        }
+            currentScope.set(identName, finalType);
+        } 
 
         return PrimitiveType.Unit // Let statements are Unit type
     }
 
     visitBlock_expression(ctx: Block_expressionContext): MiniRustType {
+        this.enterScope(); 
         const statements = ctx.statement();
         let resultType: MiniRustType = PrimitiveType.Unit;
 
@@ -278,6 +302,7 @@ export class TypeChecker
         // if (finalExpr) {
         //     return this.visitExpression(finalExpr);
         // }
+        this.exitScope(); // Exit the block scope
         console.log("Return block type:", resultType);
         return resultType;
     }
@@ -430,7 +455,7 @@ export class TypeChecker
     visitPath_expression(ctx: Path_expressionContext): MiniRustType {
 
         const identName = ctx.IDENTIFIER().getText()
-        const type = this.symbolTable.get(identName)
+        const type = this.lookupSymbol(identName)
 
         if (type === undefined) {
             this.addError(`Use of undeclared variable '${identName}'`, ctx)
@@ -531,7 +556,6 @@ export class TypeChecker
         const paramTypes: MiniRustType[] = [];
         const returnTypeCtx = ctx.function_return_type()?.type();
         let returnType: MiniRustType = PrimitiveType.Unit; 
-    
         // Process parameters
         const paramsCtx = ctx.function_parameters();
         if (paramsCtx) {
@@ -554,7 +578,7 @@ export class TypeChecker
             returnType = this.getTypeFromContext(returnTypeCtx);
         }
     
-        if (this.symbolTable.has(functionName)) {
+        if (this.currentScope().has(functionName)) {
             this.addError(
                 `Function '${functionName}' is already declared.`,
                 ctx.IDENTIFIER()
@@ -568,7 +592,9 @@ export class TypeChecker
             paramTypes,
             returnType,
         };
-        this.symbolTable.set(functionName, functionType);
+        this.currentScope().set(functionName, functionType);
+
+        this.enterScope();
     
         // Visit the function body
         const blockCtx = ctx.block_expression();
@@ -580,7 +606,7 @@ export class TypeChecker
             if (paramsCtx) {
                 paramsCtx.function_param_pattern().forEach((paramCtx, index) => {
                     const paramName = paramCtx.IDENTIFIER().getText();
-                    this.symbolTable.set(paramName, paramTypes[index]);
+                    this.currentScope().set(paramName, paramTypes[index]);
                 });
             }
     
@@ -598,14 +624,16 @@ export class TypeChecker
             
             this.symbolTable = previousSymbolTable;
         }
-    
+
+        this.exitScope();
+
         return PrimitiveType.Unit;
     }
 
     visitCallExpr(ctx: CallExprContext): MiniRustType {
         const pathExpr = ctx.path_expression();
         const functionName = pathExpr.IDENTIFIER().getText(); // Access IDENTIFIER from path_expression
-        const fnType = this.symbolTable.get(functionName);
+        const fnType = this.lookupSymbol(functionName);
         
         if (!fnType || fnType.kind !== 'function') {
             this.addError(`Call to undefined or non-function '${functionName}'`, ctx);
@@ -623,6 +651,7 @@ export class TypeChecker
             return PrimitiveType.Error;
         }
     
+
         for (let i = 0; i < args.length; i++) {
             const argType = this.visitExpression(args[i]);
             if (!typesEqual(argType, paramTypes[i])) {
@@ -633,6 +662,7 @@ export class TypeChecker
                 return PrimitiveType.Error;
             }
         }
+
     
         return fnType.returnType;
     }
