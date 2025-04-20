@@ -174,6 +174,13 @@ export class TypeChecker
             ) {
                 // Error already reported, propagate error type
                 finalType = PrimitiveType.Error
+            } else if (declaredType === PrimitiveType.Bool && !(initializerType === PrimitiveType.Bool)) {
+                // Special case: boolean variables can only be assigned boolean values
+                this.addError(
+                    `Cannot assign value of type '${initializerType}' to boolean variable '${identName}'. Only 'true' or 'false' are allowed.`,
+                    exprCtx!
+                )
+                finalType = PrimitiveType.Error
             } else if (!typesEqual(declaredType, initializerType)) {
                 this.addError(
                     `Mismatched types: expected '${declaredType}', found '${initializerType}'`,
