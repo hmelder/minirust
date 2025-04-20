@@ -55,7 +55,7 @@ test('Type Checker Tests', async (t) => {
         const [errors, visitor] = typeCheckProg('fn main() { let a:bool = 10; return a; }')
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 1); // Ensure one error is reported
-        assert.match(errors[0].message, /Mismatched types: expected 'bool', found 'i32'/); // Check error message
+        assert.match(errors[0].message, /Cannot assign value of type 'i32' to boolean variable 'a'. Only 'true' or 'false' are allowed./); // Check error message
     })
     
     await t.test('should not perform addition on i32 and bool', () => {
@@ -64,7 +64,7 @@ test('Type Checker Tests', async (t) => {
         )
         const symbolTable = visitor.getSymbolTable()
         assert.strictEqual(errors.length, 1); // Ensure one error is reported
-        assert.match(errors[0].message, /Mismatched types: expected 'bool', found 'i32'/);
+        assert.match(errors[0].message, /Cannot assign value of type 'i32' to boolean variable 'b'. Only 'true' or 'false' are allowed./);
     })
 
     await t.test('should infer type and perform addition', () => {
