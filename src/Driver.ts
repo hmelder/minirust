@@ -19,10 +19,12 @@ export function evaluate(chunk: string): VM.Data {
     const tree = parser.prog()
 
     // Run type checker
-    
+
     const typeErrors = checker.check(tree)
     if (typeErrors.length !== 0) {
-        throw new Error(`Encountered type error(s): ${typeErrors}`)
+        throw new Error(
+            `Encountered type error(s): ${JSON.stringify(typeErrors)}`
+        )
     }
 
     // Lower to MIR
