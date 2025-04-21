@@ -1,5 +1,5 @@
 // typechecker.ts
-import { ParseTreeVisitor, AbstractParseTreeVisitor } from 'antlr4ng'
+import { ParseTreeVisitor, AbstractParseTreeVisitor, ErrorNode } from 'antlr4ng'
 import {
     ProgContext,
     FunctionContext,
@@ -10,7 +10,7 @@ import {
     Literal_expressionContext,
     Path_expressionContext,
     Block_expressionContext,
-    TypeContext, // Context for type annotations like ': u32'
+    TypeContext, 
     IntLiteralContext,
     BoolLiteralContext,
     IfExprContext,
@@ -20,7 +20,9 @@ import {
     PathExprContext,
     CallExprContext,
     BinOpExprContext,
-    RetExprContext
+    RetExprContext,
+    ExprStmtContext,
+    Expression_statementContext
 } from './parser/src/MiniRustParser' // Adjust path
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor' // Adjust path
 import { MiniRustType, PrimitiveType, isNumeric, typesEqual, FunctionType } from './types'
@@ -33,33 +35,41 @@ export class TypeChecker
 {
     // Symbol Table: Maps variable names to their types
     // Simple version: single scope. Add scoping for blocks/functions later.
-    private symbolTable: Map<string, MiniRustType> = new Map()
+    // private symbolTable: Map<string, MiniRustType> = new Map()
+
+    private symbolTableStack: Map<string, MiniRustType>[] = [new Map()];
     private errors: TypeError[] = []
+
+    private enterScope(): void {
+        this.symbolTableStack.push(new Map());
+        console.log('Entered new scope');
+    }
+    
+    private exitScope(): void {
+        this.symbolTableStack.pop();
+        console.log('Exited scope');
+    }
+    
+    private currentScope(): Map<string, MiniRustType> {
+        return this.symbolTableStack[this.symbolTableStack.length - 1];
+    }
+    
+    private lookupSymbol(name: string): MiniRustType | undefined {
+        // Search from the current scope outward
+        for (let i = this.symbolTableStack.length - 1; i >= 0; i--) {
+            const scope = this.symbolTableStack[i];
+            if (scope.has(name)) {
+                return scope.get(name);
+            }
+        }
+        return undefined; // Not found
+    }
 
     // --- Entry Point ---
     public check(ctx: ProgContext): TypeError[] {
         this.visitExpression(ctx)
         return this.errors
     }
-
-    public getSymbolTable(): Map<string, MiniRustType> {
-        return this.symbolTable
-    }
-
-    // Default result for unhandled nodes (should ideally be covered)
-    /*
-    protected defaultResult(): MiniRustType {
-        console.warn('TypeChecker: Visiting unhandled node type.')
-        return PrimitiveType.Error // Or Unknown? Error prevents cascade issues better.
-    }*/
-
-    // Aggregate results (not strictly needed if returning single type)
-    // protected aggregateResult(aggregate: MiniRustType, nextResult: MiniRustType): MiniRustType {
-    //     // Handle aggregation if necessary, e.g., if checking sequences
-    //     return nextResult; // Often, the last result is relevant
-    // }
-
-    // --- Helper Methods ---
 
     private addError(
         message: string,
@@ -103,31 +113,78 @@ export class TypeChecker
 
     // --- Visitor Implementations ---
     visitProg(ctx: ProgContext): MiniRustType {
+        this.enterScope();
+    
+        let hasMain = false;
+        // Check for any top-level statements — not allowed
+        for (const child of ctx.children) {
+            if (child instanceof ErrorNode) {
+                this.addError(`All statements and expressions must be inside functions.`, child);
+                return PrimitiveType.Error;
+            }
+        }
+
+        const functions = ctx.function_();
+        if (functions.length === 0) {
+            this.addError(`All statements and expressions must be inside functions.`, ctx);
+            return PrimitiveType.Error;
+        }
+
         for (const functionCtx of ctx.function_()) {
             const functionName = functionCtx.IDENTIFIER().getText();
-    
+            
             if (functionName === 'main') {
-                // Special handling for `main`
+                hasMain = true;
                 console.log(`visitProg: Processing 'main' function`);
                 this.handleMainFunction(functionCtx);
             } else {
-                // Process other functions normally
                 this.visitFunction(functionCtx);
             }
         }
-        return PrimitiveType.Unit; // The program itself has no type
+    
+        this.exitScope();
+    
+        if (!hasMain) {
+            this.addError(`Missing required 'main' function.`, ctx);
+        }
+    
+        return PrimitiveType.Unit;
     }
+    
     
     // Special handling for the `main` function
     private handleMainFunction(ctx: FunctionContext): void {
         console.log(`handleMainFunction: Processing 'main' function`);
     
-        // Visit the body of `main`
+        // Check declared return type (must be omitted or explicitly `-> ()`)
+        // const returnTypeCtx = ctx.function_return_type()?.type();
+        // if (returnTypeCtx) {
+        //     const declaredReturnType = this.getTypeFromContext(returnTypeCtx);
+        //     if (declaredReturnType !== PrimitiveType.Unit) {
+        //         this.addError(
+        //             `The 'main' function must return '()', but declared return type is '${declaredReturnType}'`,
+        //             returnTypeCtx
+        //         );
+        //     }
+        // }
+    
+        // Visit and type-check the function body
         const blockCtx = ctx.block_expression();
         if (blockCtx) {
-            this.visit(blockCtx); // Directly visit the block expression
+            this.visitExpression(blockCtx);
+            console.log("block context: ", blockCtx.constructor.name);
+            // const actualReturnType = this.visitExpression(blockCtx);
+            // console.log("block context type: ", actualReturnType);
+    
+            // if (actualReturnType !== PrimitiveType.Unit) {
+            //     this.addError(
+            //         `The 'main' function must return '()', but its body evaluates to '${actualReturnType}'`,
+            //         blockCtx
+            //     );
+            // }
         }
     }
+    
 
     visitLet_statement(ctx: Let_statementContext): MiniRustType {
         const identNode = ctx.IDENTIFIER()
@@ -138,12 +195,12 @@ export class TypeChecker
             return PrimitiveType.Error
         }
 
-        // Check for redeclaration in the same scope (simple check)
-        if (this.symbolTable.has(identName)) {
-            this.addError(
-                `Identifier '${identName}' already declared in this scope.`,
-                identNode!
-            )
+        const currentScope = this.currentScope();
+
+        // Check for redeclaration in the same scope
+        if (currentScope.has(identName)) {
+            this.addError(`Identifier '${identName}' already declared in this scope.`, identNode!);
+            return PrimitiveType.Error;
         }
 
         let declaredType: MiniRustType | null = null
@@ -173,6 +230,13 @@ export class TypeChecker
                 initializerType === PrimitiveType.Error
             ) {
                 // Error already reported, propagate error type
+                finalType = PrimitiveType.Error
+            } else if (declaredType === PrimitiveType.Bool && !(initializerType === PrimitiveType.Bool)) {
+                // Special case: boolean variables can only be assigned boolean values
+                this.addError(
+                    `Cannot assign value of type '${initializerType}' to boolean variable '${identName}'. Only 'true' or 'false' are allowed.`,
+                    exprCtx!
+                )
                 finalType = PrimitiveType.Error
             } else if (!typesEqual(declaredType, initializerType)) {
                 this.addError(
@@ -209,33 +273,48 @@ export class TypeChecker
         // 4. Add to symbol table (even if error, to potentially reduce cascade errors)
         // Only add non-error types definitively.
         if (finalType !== PrimitiveType.Error) {
-            this.symbolTable.set(identName, finalType)
-        } else if (!this.symbolTable.has(identName)) {
-            // Add error type if not already declared to avoid 'undeclared' errors later
-            this.symbolTable.set(identName, PrimitiveType.Error)
-        }
+            currentScope.set(identName, finalType);
+        } 
 
         return PrimitiveType.Unit // Let statements are Unit type
     }
 
     visitBlock_expression(ctx: Block_expressionContext): MiniRustType {
+        this.enterScope(); 
+        const statements = ctx.statement();
+        let resultType: MiniRustType = PrimitiveType.Unit;
+
         // Process all statements in the block
-        for (const statementCtx of ctx.statement()) {
-            console.log(statementCtx.constructor.name);
-            this.visitExpression(statementCtx);
+        for (const stmt of statements) {
+            if (stmt instanceof SemiStmtContext) {
+                continue;
+            } else if (stmt instanceof RetExprContext) {
+                const expr = stmt.expression();
+                if (expr) {
+                    resultType = this.visitExpression(expr);
+                }
+            } else if (stmt instanceof ExprStmtContext) {
+                resultType = this.visitExpression(stmt);
+            }  
+            else if (stmt instanceof IfExprContext) {
+                resultType = this.visitExpression(stmt);
+            } 
+            this.visitExpression(stmt);
         }
         
         // If there's a final expression (for implicit return)
-        const finalExpr = ctx.expression();
-        if (finalExpr) {
-            return this.visitExpression(finalExpr);
-        }
-        
-        return PrimitiveType.Unit;
+        // const finalExpr = ctx.expression();
+        // console.log("final:", finalExpr?.constructor.name);
+        // if (finalExpr) {
+        //     return this.visitExpression(finalExpr);
+        // }
+        this.exitScope(); // Exit the block scope
+        console.log("Return block type:", resultType);
+        return resultType;
     }
 
     visitSemiStmt(ctx: SemiStmtContext): MiniRustType {
-        this.visitChildren(ctx); // If it has an expression inside, process it
+        this.visitChildren(ctx);
         return PrimitiveType.Unit;
     }
     
@@ -246,9 +325,12 @@ export class TypeChecker
         const leftExpr = ctx.expression(0)
         const rightExpr = ctx.expression(1)
         const op = ctx._op?.text ?? '<unknown op>' // Get operator symbol
-
-        const leftType = this.visit(leftExpr)
-        const rightType = this.visit(rightExpr)
+        const leftType = this.visitExpression(leftExpr)
+        console.log("Left name:", leftExpr.constructor.name);
+        console.log("Left type:", leftType);
+        const rightType = this.visitExpression(rightExpr)
+        console.log("Right name:", rightExpr.constructor.name);
+        console.log("Right type:", rightType);
 
         // If either operand had an error, propagate it
         if (
@@ -350,8 +432,8 @@ export class TypeChecker
     }
 
     visitLiteral_expression(ctx: Literal_expressionContext): MiniRustType {
+
         const literalText = ctx.getText();
-    
         if (ctx instanceof IntLiteralContext) {
             if (literalText.endsWith('u32')) {
                 return PrimitiveType.U32;
@@ -379,7 +461,7 @@ export class TypeChecker
     visitPath_expression(ctx: Path_expressionContext): MiniRustType {
 
         const identName = ctx.IDENTIFIER().getText()
-        const type = this.symbolTable.get(identName)
+        const type = this.lookupSymbol(identName)
 
         if (type === undefined) {
             this.addError(`Use of undeclared variable '${identName}'`, ctx)
@@ -402,7 +484,7 @@ export class TypeChecker
         // --- Check against expected function return type ---
         // For now, assume the implicit "main" function expects i32
         // FIXME
-        const expectedReturnType = PrimitiveType.I32
+        // const expectedReturnType = PrimitiveType.I32
 
 
         if (returnValType === PrimitiveType.Error) {
@@ -410,17 +492,29 @@ export class TypeChecker
             return PrimitiveType.Error // Propagate
         }
 
-        if (!typesEqual(returnValType, expectedReturnType)) {
-            this.addError(
-                `Mismatched return type: expected '${expectedReturnType}', found '${returnValType}'`,
-                exprCtx ?? ctx
-            )
-            return PrimitiveType.Error
-        }
+        // if (!typesEqual(returnValType, expectedReturnType)) {
+        //     this.addError(
+        //         `Mismatched return type: expected '${expectedReturnType}', found '${returnValType}'`,
+        //         exprCtx ?? ctx
+        //     )
+        //     return PrimitiveType.Error
+        // }
 
         // The 'return' expression itself doesn't really have a value type accessible
         // after it, often considered 'Never' type (!). Returning Unit or Error is practical.
         return returnValType // Or Error if mismatch occurred
+    }
+
+    visitExprStmt(ctx: Expression_statementContext): MiniRustType {
+        const expr = ctx.expression();
+        if (!expr) {
+            // Invalid expression — likely a parsing issue
+            this.addError("Empty expression statement", ctx);
+            return PrimitiveType.Error;
+        }
+        
+        // Evaluate the expression normally
+        return this.visitExpression(expr);
     }
 
     // Override visitExpression to delegate correctly based on actual context type
@@ -443,17 +537,15 @@ export class TypeChecker
         } else if (ctx instanceof RetExprContext) {
             return this.visitRetExpr(ctx)
         } else if (ctx instanceof BlockExprContext) {
-            // Check for your Identifier usage context
             return this.visitBlock_expression(ctx)
         } else if (ctx instanceof Block_expressionContext) {
-            // Check for your Identifier usage context
             return this.visitBlock_expression(ctx)
         } else if (ctx instanceof IfExprContext) {
-            // Check for your Identifier usage context
             return this.visitIfExpr(ctx)
         } else if (ctx instanceof PathExprContext) {
-            // Check for your Identifier usage context
             return this.visitPath_expression(ctx.path_expression())
+        } else if (ctx instanceof ExprStmtContext) {
+            return this.visitExprStmt(ctx.expression_statement())
         }
         // Add other expression types (parentheses, unary, calls, etc.)
 
@@ -470,7 +562,6 @@ export class TypeChecker
         const paramTypes: MiniRustType[] = [];
         const returnTypeCtx = ctx.function_return_type()?.type();
         let returnType: MiniRustType = PrimitiveType.Unit; 
-    
         // Process parameters
         const paramsCtx = ctx.function_parameters();
         if (paramsCtx) {
@@ -493,7 +584,7 @@ export class TypeChecker
             returnType = this.getTypeFromContext(returnTypeCtx);
         }
     
-        if (this.symbolTable.has(functionName)) {
+        if (this.currentScope().has(functionName)) {
             this.addError(
                 `Function '${functionName}' is already declared.`,
                 ctx.IDENTIFIER()
@@ -507,37 +598,44 @@ export class TypeChecker
             paramTypes,
             returnType,
         };
-        this.symbolTable.set(functionName, functionType);
+        this.currentScope().set(functionName, functionType);
+
+        this.enterScope();
     
         // Visit the function body
         const blockCtx = ctx.block_expression();
-        if (blockCtx) {
-            // Save current symbol table to restore after function processing
-            const previousSymbolTable = new Map(this.symbolTable);
-            
+        if (blockCtx) {            
             // Add parameters to symbol table
             if (paramsCtx) {
                 paramsCtx.function_param_pattern().forEach((paramCtx, index) => {
                     const paramName = paramCtx.IDENTIFIER().getText();
-                    this.symbolTable.set(paramName, paramTypes[index]);
+                    this.currentScope().set(paramName, paramTypes[index]);
                 });
             }
     
             // Process the function body - this is crucial
             console.log(`Name: '${blockCtx.constructor.name}'`);
+            // Process the function body and check return type
             const bodyType = this.visitExpression(blockCtx);
-            
-            this.symbolTable = previousSymbolTable;
+            console.log("Body Type:", bodyType);
+            if (!typesEqual(bodyType, returnType)) {
+                this.addError(
+                    `Function '${functionName}' declared to return '${returnType}', but body evaluates to '${bodyType}'`,
+                    blockCtx
+                );
+            }
         }
-    
+
+        this.exitScope();
+
         return PrimitiveType.Unit;
     }
 
     visitCallExpr(ctx: CallExprContext): MiniRustType {
         const pathExpr = ctx.path_expression();
         const functionName = pathExpr.IDENTIFIER().getText(); // Access IDENTIFIER from path_expression
-        const fnType = this.symbolTable.get(functionName);
-    
+        const fnType = this.lookupSymbol(functionName);
+        
         if (!fnType || fnType.kind !== 'function') {
             this.addError(`Call to undefined or non-function '${functionName}'`, ctx);
             return PrimitiveType.Error;
@@ -554,6 +652,7 @@ export class TypeChecker
             return PrimitiveType.Error;
         }
     
+
         for (let i = 0; i < args.length; i++) {
             const argType = this.visitExpression(args[i]);
             if (!typesEqual(argType, paramTypes[i])) {
@@ -564,6 +663,7 @@ export class TypeChecker
                 return PrimitiveType.Error;
             }
         }
+
     
         return fnType.returnType;
     }
@@ -582,13 +682,30 @@ export class TypeChecker
         const statements = ctx.statement();
         
         const mid = Math.floor(statements.length / 2); // crude split between then/else
-    
+        
+        if (mid === 0) {
+            const expr = ctx.expression(1); 
+            if (expr) {
+                return this.visitExpression(expr);
+            }
+        }
+
         // Visit 'then' statements
         let thenType: MiniRustType = PrimitiveType.Unit;
         for (let i = 0; i < mid; i++) {
             const stmt = statements[i];
             console.log("Now running if statement:",stmt.constructor.name);
-            thenType = this.visitExpression(stmt);
+            if (stmt instanceof SemiStmtContext) {
+                continue;
+            } else if (stmt instanceof RetExprContext) {
+                const expr = stmt.expression();
+                if (expr) {
+                    thenType = this.visitExpression(expr);
+                }
+            } else if (stmt instanceof ExprStmtContext) {
+                thenType = this.visitExpression(stmt);
+            } 
+            this.visitExpression(stmt);
             console.log("thentype:", thenType);
         }
     
@@ -597,7 +714,17 @@ export class TypeChecker
         for (let i = mid; i < statements.length; i++) {
             const stmt = statements[i];
             console.log("Now running then statement:",stmt.constructor.name);
-            elseType = this.visitExpression(stmt);
+            if (stmt instanceof SemiStmtContext) {
+                continue;
+            } else if (stmt instanceof RetExprContext) {
+                const expr = stmt.expression();
+                if (expr) {
+                    elseType = this.visitExpression(expr);
+                }
+            } else if (stmt instanceof ExprStmtContext) {
+                elseType = this.visitExpression(stmt);
+            } 
+            this.visitExpression(stmt);
             console.log("elsetype:", elseType);
         }
     
@@ -608,7 +735,8 @@ export class TypeChecker
             );
             return PrimitiveType.Error;
         }
-    
+        
+        console.log("Final type:", thenType);
         return thenType;
     }
     
