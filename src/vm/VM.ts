@@ -44,7 +44,7 @@ export namespace VM {
 
     export interface AllocInstr {
         opcode: 'ALLOCA' | 'MALLOC' | 'FREEA'
-        length: number // for malloc in bytes for alloca in words
+        length?: number // for malloc in bytes for alloca in words
     }
 
     export interface CallInstr {
@@ -301,11 +301,26 @@ export namespace VM {
             // --- Stack Manipulation Instructions ---
 
             ALLOCA: (instr: AllocInstr) => {
-                this.state.stack.alloca(instr.length * this.bytesPerSlot)
+                let length: number
+                if (instr.length) {
+                    length = instr.length
+                } else {
+                    length = this.state.stack.popUint32()
+                }
+                this.state.stack.alloca(length * this.bytesPerSlot)
                 this.state.ip += 1
             },
             FREEA: (instr: AllocInstr) => {
-                this.state.stack.free(instr.length * this.bytesPerSlot)
+                const stack = this.state.stack
+
+                let length: number
+                if (instr.length) {
+                    length = instr.length
+                } else {
+                    length = stack.popUint32()
+                }
+
+                stack.free(length * this.bytesPerSlot)
                 this.state.ip += 1
             },
             ASSIGN: (instr: AssignInstr) => {
@@ -403,7 +418,14 @@ export namespace VM {
                 const heap = this.state.heap
                 const stack = this.state.stack
 
-                const addr = heap.malloc(instr.length) // potential rt errors handled in instruction execution
+                let length: number
+                if (instr.length) {
+                    length = instr.length
+                } else {
+                    length = stack.popUint32()
+                }
+
+                const addr = heap.malloc(length) // potential rt errors handled in instruction execution
                 stack.pushUint32(addr)
 
                 this.state.ip += 1
