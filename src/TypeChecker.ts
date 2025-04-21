@@ -22,6 +22,8 @@ import {
     BinOpExprContext,
     RetExprContext,
     ExprStmtContext,
+    MutableBorrowExprContext,
+    ImmutableBorrowExprContext,
     Expression_statementContext
 } from './parser/src/MiniRustParser' // Adjust path
 import { MiniRustVisitor } from './parser/src/MiniRustVisitor' // Adjust path
@@ -38,6 +40,12 @@ export class TypeChecker
     // private symbolTable: Map<string, MiniRustType> = new Map()
 
     private symbolTableStack: Map<string, MiniRustType>[] = [new Map()];
+    private ownershipTable: Map<string, { 
+        owner: string | null, 
+        isBorrowed: boolean,
+        borrowType: 'mutable' | 'immutable' | null 
+    }> = new Map();
+
     private errors: TypeError[] = []
 
     private enterScope(): void {
@@ -95,21 +103,78 @@ export class TypeChecker
         this.errors.push(createTypeError(message, contextNode))
     }
 
-    // Resolves a type context (like 'u32') into our MiniRustType enum
     private getTypeFromContext(ctx: TypeContext): MiniRustType {
-        const typeText = ctx.getText()
-        switch (typeText) {
-            case 'i32':
-                return PrimitiveType.I32
-            case 'u32':
-                return PrimitiveType.U32
-            case 'bool':
-                return PrimitiveType.Bool
-            default:
-                this.addError(`Unknown type annotation: ${typeText}`, ctx)
-                return PrimitiveType.Error
+        // Handle borrowed types
+        if (ctx.AMP()) {
+            const innerType = this.getTypeFromContext(ctx.type()!); // Get the inner type
+            if (ctx.MUT()) {
+                return { kind: 'borrow', mutable: true, innerType }; // Mutable borrow
+            } else {
+                return { kind: 'borrow', mutable: false, innerType }; // Immutable borrow
+            }
+        }
+    
+        // Handle primitive types
+        if (ctx.U32()) {
+            return PrimitiveType.U32;
+        }
+        if (ctx.I32()) {
+            return PrimitiveType.I32;
+        }
+        if (ctx.BOOL()) {
+            return PrimitiveType.Bool;
+        }
+    
+        // Unknown type
+        this.addError(`Unknown type annotation: ${ctx.getText()}`, ctx);
+        return PrimitiveType.Error;
+    }
+
+    private borrowVariable(name: string, borrowType: 'mutable' | 'immutable', ctx: ExpressionContext): void {
+        console.log(`Borrowing variable '${name}' as ${borrowType}`);
+        const ownershipInfo = this.ownershipTable.get(name);
+    
+        if (!ownershipInfo) {
+            this.addError(`Variable '${name}' is not declared.`, ctx);
+            return;
+        }
+    
+        if (borrowType === 'mutable') {
+            if (ownershipInfo.isBorrowed) {
+                console.log(`Conflict: '${name}' is already borrowed ${ownershipInfo.borrowType}`);
+                this.addError(
+                    `Cannot mutably borrow '${name}' because it is already borrowed ${ownershipInfo.borrowType === 'mutable' ? 'mutably' : 'immutably'}.`,
+                    ctx
+                );
+                return;
+            }
+            ownershipInfo.isBorrowed = true;
+            ownershipInfo.borrowType = 'mutable';
+            console.log(`'${name}' is now mutably borrowed.`);
+        } else if (borrowType === 'immutable') {
+            if (ownershipInfo.isBorrowed && ownershipInfo.borrowType === 'mutable') {
+                console.log(`Conflict: '${name}' is already mutably borrowed`);
+                this.addError(
+                    `Cannot immutably borrow '${name}' because it is already mutably borrowed.`,
+                    ctx
+                );
+                return;
+            }
+            ownershipInfo.isBorrowed = true;
+            ownershipInfo.borrowType = 'immutable';
+            console.log(`'${name}' is now immutably borrowed.`);
         }
     }
+
+    private releaseAllBorrowsInScope(): void {
+        for (const [name, ownershipInfo] of this.ownershipTable.entries()) {
+            if (ownershipInfo.isBorrowed) {
+                ownershipInfo.isBorrowed = false;
+                ownershipInfo.borrowType = null;
+            }
+        }
+    }
+    
 
     // --- Visitor Implementations ---
     visitProg(ctx: ProgContext): MiniRustType {
@@ -274,6 +339,11 @@ export class TypeChecker
         // Only add non-error types definitively.
         if (finalType !== PrimitiveType.Error) {
             currentScope.set(identName, finalType);
+            this.ownershipTable.set(identName, {
+                owner: null,
+                isBorrowed: false,
+                borrowType: null,
+            });
         } 
 
         return PrimitiveType.Unit // Let statements are Unit type
@@ -308,6 +378,7 @@ export class TypeChecker
         // if (finalExpr) {
         //     return this.visitExpression(finalExpr);
         // }
+        this.releaseAllBorrowsInScope();
         this.exitScope(); // Exit the block scope
         console.log("Return block type:", resultType);
         return resultType;
@@ -459,17 +530,26 @@ export class TypeChecker
     // Assumes your grammar has IDENTIFIER labeled as #IdentExpr within expression rule
     // Or use visitPath_expression if that's the rule name
     visitPath_expression(ctx: Path_expressionContext): MiniRustType {
-
-        const identName = ctx.IDENTIFIER().getText()
-        const type = this.lookupSymbol(identName)
-
+        const identName = ctx.IDENTIFIER().getText();
+        const type = this.lookupSymbol(identName);
+    
         if (type === undefined) {
-            this.addError(`Use of undeclared variable '${identName}'`, ctx)
-            return PrimitiveType.Error
+            this.addError(`Use of undeclared variable '${identName}'`, ctx);
+            return PrimitiveType.Error;
         }
-        // Could potentially check for use of uninitialized variable here if tracked
-
-        return type // Return the looked-up type
+    
+        const ownershipInfo = this.ownershipTable.get(identName);
+        if (ownershipInfo) {
+            if (ownershipInfo.isBorrowed && ownershipInfo.borrowType === 'mutable') {
+                this.addError(
+                    `Cannot access '${identName}' while it is mutably borrowed.`,
+                    ctx
+                );
+                return PrimitiveType.Error;
+            }
+        }
+    
+        return type;
     }
 
     visitRetExpr(ctx: RetExprContext): MiniRustType {
@@ -517,9 +597,35 @@ export class TypeChecker
         return this.visitExpression(expr);
     }
 
+    visitBorrowExpr(ctx: ImmutableBorrowExprContext | MutableBorrowExprContext): MiniRustType {
+        const borrowType = ctx instanceof MutableBorrowExprContext ? 'mutable' : 'immutable';
+        const exprCtx = ctx.expression();
+        const variableName = exprCtx.getText();
+    
+        // Lookup the type of the variable being borrowed
+        const originalType = this.lookupSymbol(variableName);
+        if (!originalType) {
+            this.addError(`Variable '${variableName}' is not declared.`, ctx);
+            return PrimitiveType.Error;
+        }
+    
+        // Ensure the variable is not already borrowed in a conflicting way
+        this.borrowVariable(variableName, borrowType, ctx);
+    
+        // Create the borrowed type
+        const borrowedType: MiniRustType = {
+            kind: 'borrow',
+            mutable: borrowType === 'mutable',
+            innerType: originalType,
+        };
+    
+        return borrowedType;
+    }
+
     // Override visitExpression to delegate correctly based on actual context type
     // This prevents infinite loops if rules are recursive (e.g., expression: expression op expression)
     visitExpression(ctx: ExpressionContext): MiniRustType {
+        console.log(`VisitingExpression: Context type: ${ctx.constructor.name}`);
         // Check the specific type of ExpressionContext and call the appropriate visitor
         // This relies on ANTLR generating distinct context types or labels
         if (ctx instanceof BinOpExprContext) {
@@ -530,6 +636,10 @@ export class TypeChecker
             return this.visitCallExpr(ctx)
         } else if (ctx instanceof LiteralExprContext) {
             return this.visitLiteral_expression(ctx.literal_expression()) 
+        } else if (ctx instanceof MutableBorrowExprContext) {
+            return this.visitBorrowExpr(ctx); // Handle mutable borrow
+        } else if (ctx instanceof ImmutableBorrowExprContext) {
+            return this.visitBorrowExpr(ctx); // Handle immutable borrow
         } else if (ctx instanceof SemiStmtContext) {
             return this.visitSemiStmt(ctx) 
         } else if (ctx instanceof LetStmtContext) {
@@ -547,8 +657,8 @@ export class TypeChecker
         } else if (ctx instanceof ExprStmtContext) {
             return this.visitExprStmt(ctx.expression_statement())
         }
-        // Add other expression types (parentheses, unary, calls, etc.)
 
+        // Add other expression types (parentheses, unary, calls, etc.)
         // Fallback if no specific context matches (might indicate grammar issue or unhandled case)
         this.addError(
             `Unhandled expression type in visitExpression: ${ctx.constructor.name}`,

@@ -341,4 +341,77 @@ test('Type Checker Tests', async (t) => {
         assert.strictEqual(errors.length, 1);
         assert.match(errors[0].message, /All statements and expressions must be inside functions./);
     });
+
+    await t.test('should handle borrowed types in variable declaration', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let x: i32 = 10;
+                let y: &i32 = &x;
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 0); // Ensure no errors
+    });
+
+    await t.test('should handle mutable borrowed types', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let mut x: i32 = 10;
+                let y: &mut i32 = &mut x; 
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 0); // Ensure no errors
+
+    });
+
+    await t.test('should allow multiple immutable borrows', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let x: i32 = 10;
+                let y: &i32 = &x;
+                let z: &i32 = &x;
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 0);
+
+    });
+
+    await t.test('should report error for unknown type', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let x: &unknown = 10; 
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Unknown type annotation: /);
+    });
+    
+    await t.test('should report error for mutable borrow conflict', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let mut x: i32 = 10;
+                let y: &mut i32 = &mut x; 
+                let z: &mut i32 = &mut x; 
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Cannot mutably borrow 'x' because it is already borrowed mutably/);
+    });
+
+    await t.test('should report error for immutable and mutable borrow conflict', () => {
+        const [errors] = typeCheckProg(`
+            fn main() {
+                let mut x: i32 = 10;
+                let y: &i32 = &x;      
+                let z: &mut i32 = &mut x; 
+            }
+        `);
+    
+        assert.strictEqual(errors.length, 1);
+        assert.match(errors[0].message, /Cannot mutably borrow 'x' because it is already borrowed immutably/);
+    });
 })
