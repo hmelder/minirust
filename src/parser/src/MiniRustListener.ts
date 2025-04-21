@@ -17,10 +17,12 @@ import { PredicateLoopExprContext } from "./MiniRustParser.js";
 import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
+import { ImmutableBorrowExprContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
 import { CallExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
 import { CompExprContext } from "./MiniRustParser.js";
+import { MutableBorrowExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
 import { IntLiteralContext } from "./MiniRustParser.js";
 import { BoolLiteralContext } from "./MiniRustParser.js";
@@ -192,6 +194,18 @@ export class MiniRustListener implements ParseTreeListener {
      */
     exitExpression_statement?: (ctx: Expression_statementContext) => void;
     /**
+     * Enter a parse tree produced by the `ImmutableBorrowExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterImmutableBorrowExpr?: (ctx: ImmutableBorrowExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `ImmutableBorrowExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitImmutableBorrowExpr?: (ctx: ImmutableBorrowExprContext) => void;
+    /**
      * Enter a parse tree produced by the `LiteralExpr`
      * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
@@ -239,6 +253,18 @@ export class MiniRustListener implements ParseTreeListener {
      * @param ctx the parse tree
      */
     exitCompExpr?: (ctx: CompExprContext) => void;
+    /**
+     * Enter a parse tree produced by the `MutableBorrowExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    enterMutableBorrowExpr?: (ctx: MutableBorrowExprContext) => void;
+    /**
+     * Exit a parse tree produced by the `MutableBorrowExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     */
+    exitMutableBorrowExpr?: (ctx: MutableBorrowExprContext) => void;
     /**
      * Enter a parse tree produced by the `PathExpr`
      * labeled alternative in `MiniRustParser.expression`.

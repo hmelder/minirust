@@ -42,7 +42,9 @@ expression_statement:
     expression SEMI;
 
 expression
-    : literal_expression #LiteralExpr
+    : AMP MUT expression            # MutableBorrowExpr
+    | AMP expression                # ImmutableBorrowExpr
+    | literal_expression            #LiteralExpr
     | path_expression #PathExpr
     // Arithmetic and Logical Binary Operators
     // https://doc.rust-lang.org/reference/expressions/operator-expr.html#r-expr.arith-logic.syntax 
@@ -77,6 +79,8 @@ type
     : U32
     | I32
     | BOOL
+    | AMP type             
+    | AMP MUT type          
     ;
 
 // Represents a pattern (simplified to identifier pattern)
@@ -107,6 +111,7 @@ WHILE  : 'while';
 FN     : 'fn';
 RETURN : 'return';
 REF    : 'ref';
+AMP    : '&';
 MUT    : 'mut';
 U32    : 'u32';
 I32    : 'i32';
@@ -119,7 +124,7 @@ SUB    : '-';
 MUL    : '*';
 DIV    : '/';
 REM    : '%';
-AND   : '&';
+AND    : '&' { this.inputStream.LA(1) == '&' }?;
 OR    : '|';
 XOR   : '^';
 SHL    : '<<';

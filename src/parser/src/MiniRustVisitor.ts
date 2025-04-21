@@ -17,10 +17,12 @@ import { PredicateLoopExprContext } from "./MiniRustParser.js";
 import { RetExprContext } from "./MiniRustParser.js";
 import { Let_statementContext } from "./MiniRustParser.js";
 import { Expression_statementContext } from "./MiniRustParser.js";
+import { ImmutableBorrowExprContext } from "./MiniRustParser.js";
 import { LiteralExprContext } from "./MiniRustParser.js";
 import { CallExprContext } from "./MiniRustParser.js";
 import { BinOpExprContext } from "./MiniRustParser.js";
 import { CompExprContext } from "./MiniRustParser.js";
+import { MutableBorrowExprContext } from "./MiniRustParser.js";
 import { PathExprContext } from "./MiniRustParser.js";
 import { IntLiteralContext } from "./MiniRustParser.js";
 import { BoolLiteralContext } from "./MiniRustParser.js";
@@ -132,6 +134,13 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      */
     visitExpression_statement?: (ctx: Expression_statementContext) => Result;
     /**
+     * Visit a parse tree produced by the `ImmutableBorrowExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitImmutableBorrowExpr?: (ctx: ImmutableBorrowExprContext) => Result;
+    /**
      * Visit a parse tree produced by the `LiteralExpr`
      * labeled alternative in `MiniRustParser.expression`.
      * @param ctx the parse tree
@@ -159,6 +168,13 @@ export class MiniRustVisitor<Result> extends AbstractParseTreeVisitor<Result> {
      * @return the visitor result
      */
     visitCompExpr?: (ctx: CompExprContext) => Result;
+    /**
+     * Visit a parse tree produced by the `MutableBorrowExpr`
+     * labeled alternative in `MiniRustParser.expression`.
+     * @param ctx the parse tree
+     * @return the visitor result
+     */
+    visitMutableBorrowExpr?: (ctx: MutableBorrowExprContext) => Result;
     /**
      * Visit a parse tree produced by the `PathExpr`
      * labeled alternative in `MiniRustParser.expression`.
