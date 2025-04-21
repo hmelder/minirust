@@ -22,9 +22,10 @@ export function evaluate(chunk: string): VM.Data {
 
     const typeErrors = checker.check(tree)
     if (typeErrors.length !== 0) {
-        throw new Error(
-            `Encountered type error(s): ${JSON.stringify(typeErrors)}`
-        )
+        const errorMessage = typeErrors
+            .map((error) => ` * ${error.message}`)
+            .join('\n')
+        throw new Error(`Encountered type error(s): \n${errorMessage})}`)
     }
 
     // Lower to MIR
