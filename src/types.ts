@@ -8,7 +8,21 @@ export enum PrimitiveType {
 }
 
 // You might expand this later with references, structs, etc.
-export type MiniRustType = PrimitiveType | FunctionType;
+export type MiniRustType = PrimitiveType | FunctionType | BorrowType;
+
+// Define BorrowType for borrowed references
+export type BorrowType = {
+    kind: 'borrow';
+    mutable: boolean; // True for &mut, false for &
+    innerType: MiniRustType; // The type being borrowed
+};
+
+// Define FunctionType for function types
+export type FunctionType = {
+    kind: 'function';
+    paramTypes: MiniRustType[];
+    returnType: MiniRustType;
+};
 
 // Helper function for type comparison
 export function typesEqual(t1: MiniRustType | null | undefined, t2: MiniRustType | null | undefined): boolean {
@@ -16,6 +30,12 @@ export function typesEqual(t1: MiniRustType | null | undefined, t2: MiniRustType
 
     if (t1 === t2) {
         return true; // Primitive types are equal if they are the same
+    }
+
+    // Compare borrowed types
+    if (typeof t1 === 'object' && t1.kind === 'borrow' &&
+        typeof t2 === 'object' && t2.kind === 'borrow') {
+        return t1.mutable === t2.mutable && typesEqual(t1.innerType, t2.innerType);
     }
 
     if (typeof t1 === 'object' && t1.kind === 'function' &&
