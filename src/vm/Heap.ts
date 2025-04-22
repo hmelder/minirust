@@ -188,11 +188,24 @@ export class Heap {
         return this.view.getUint32(blockDataOffset, this.littleEndian)
     }
 
+    readInt32(ptr: number, offsetInBlock: number = 0): number {
+        const blockDataOffset = this.getDataOffset(ptr, offsetInBlock, 4)
+        if (blockDataOffset === this.NULL_OFFSET) return 0 // Error logged in getDataOffset
+        return this.view.getInt32(blockDataOffset, this.littleEndian)
+    }
+
     /** Writes a Uint32 value to the heap block. */
     writeUint32(ptr: number, value: number, offsetInBlock: number = 0): void {
         const blockDataOffset = this.getDataOffset(ptr, offsetInBlock, 4)
         if (blockDataOffset !== this.NULL_OFFSET) {
             this.view.setUint32(blockDataOffset, value, this.littleEndian)
+        }
+    }
+
+    writeInt32(ptr: number, value: number, offsetInBlock: number = 0): void {
+        const blockDataOffset = this.getDataOffset(ptr, offsetInBlock, 4)
+        if (blockDataOffset !== this.NULL_OFFSET) {
+            this.view.setInt32(blockDataOffset, value, this.littleEndian)
         }
     }
 
