@@ -62,7 +62,7 @@ test('MIR Lowering', async (t) => {
         })
 
         assert.deepStrictEqual(
-            lowerProg('fn main() { let a = true; return 42; }'),
+            lowerProg('fn main() -> i32 { let a = true; return 42; }'),
             {
                 functions: funcMap,
                 entryFunction: 'main',
@@ -165,10 +165,13 @@ test('MIR Lowering', async (t) => {
             returnType: 'i32',
         })
 
-        assert.deepStrictEqual(lowerProg('fn main() { return 1 + 2 + 3; }'), {
-            functions: funcMap,
-            entryFunction: 'main',
-        })
+        assert.deepStrictEqual(
+            lowerProg('fn main() -> i32 { return 1 + 2 + 3; }'),
+            {
+                functions: funcMap,
+                entryFunction: 'main',
+            }
+        )
     })
     await t.test('should resolve local variable', () => {
         const funcMap = new Map<MIR.FuncId, MIR.Function>()
@@ -212,7 +215,9 @@ test('MIR Lowering', async (t) => {
             returnType: 'i32',
         })
         assert.deepStrictEqual(
-            lowerProg('fn main() { let a = 0; { let b = 1; } return a; }'),
+            lowerProg(
+                'fn main() -> i32 { let a = 0; { let b = 1; } return a; }'
+            ),
             {
                 functions: funcMap,
                 entryFunction: 'main',
@@ -294,7 +299,7 @@ test('MIR Lowering', async (t) => {
             returnType: 'i32',
         })
         assert.deepStrictEqual(
-            lowerProg('fn main() { let c = 42 == 43; return 0; }'),
+            lowerProg('fn main() -> i32 { let c = 42 == 43; return 0; }'),
             {
                 functions: funcMap,
                 entryFunction: 'main',
@@ -395,7 +400,7 @@ test('MIR Lowering', async (t) => {
 
             assert.deepStrictEqual(
                 lowerProg(
-                    'fn test(arg0: i32) {return arg0;} fn main() { let a = test(42); return a; }'
+                    'fn test(arg0: i32) -> i32 {return arg0;} fn main() -> i32 { let a = test(42); return a; }'
                 ),
                 {
                     functions: funcMap,

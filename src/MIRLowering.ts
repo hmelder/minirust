@@ -43,6 +43,7 @@ export class MIRLowering
     private currentFunc: MIR.Function // Track the function we're currently inside of
     private currentBlockId!: MIR.BasicBlockId // Tracks the block we're currently adding to
     private currentScope: MIR.Scope
+    private funcRets: Map<String, MIR.Type> // Function return types
 
     // --- Helper Methods ---
 
@@ -160,6 +161,7 @@ export class MIRLowering
     visitProg(ctx: ProgContext): undefined {
         this.program = this.createProgram()
         this.currentScope = 0 // Global scope
+        this.funcRets = new Map<String, MIR.Type>()
 
         const numFunctions = ctx.function_().length
         for (let i = 0; i < numFunctions; i++) {
@@ -181,16 +183,24 @@ export class MIRLowering
     visitFunction(ctx: FunctionContext): undefined {
         const name = ctx.IDENTIFIER().getText()
 
+        // Set return type
+        const returnTypeCtx = ctx.function_return_type()
+        let returnType: MIR.Type = 'unit'
+        if (returnTypeCtx) {
+            returnType = returnTypeCtx.type().getText() as MIR.Type
+        }
+
+        this.funcRets.set(name, returnType)
+
+        // Check if this is a function declaration
+        if (ctx.SEMI()) {
+            return undefined
+        }
+
         this.currentFunc = this.createFunction(name)
         const block = this.newBlock()
         this.startBlock(block.id)
 
-        // Set return type
-        const returnTypeCtx = ctx.function_return_type()
-        let returnType: MIR.Type = 'i32' // TODO: Change to unit
-        if (returnTypeCtx) {
-            returnType = returnTypeCtx.type().getText() as MIR.Type
-        }
         this.currentFunc.returnType = returnType
 
         // Visit function parameters
@@ -579,8 +589,15 @@ export class MIRLowering
             }
         }
 
-        // FIXME: Change return type
-        const returnPlace = this.newLocal('i32')
+        // Find return value
+        if (!this.funcRets.has(funcId)) {
+            throw new Error(
+                `Calling function ${funcId} that was not declared previously is not implemented`
+            )
+        }
+
+        const returnVal = this.funcRets.get(funcId)
+        const returnPlace = this.newLocal(returnVal)
         this.setTerminator({
             kind: 'call',
             func: funcId,

@@ -4,7 +4,7 @@ export namespace MIR {
     export type LocalId = number // Represents local variables, temporaries, args
     export type Scope = number
     export type FuncId = string // Function identifier (e.g., function name)
-    export type Type = 'i32' | 'u32' | 'bool'
+    export type Type = 'i32' | 'u32' | 'bool' | 'unit'
     export type Value = number
 
     // --- Values, Places, Operands ---
