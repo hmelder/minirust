@@ -6,7 +6,7 @@ prog: function+ EOF;
 // https://doc.rust-lang.org/reference/items/functions.html
 // Note: Simplified without function qualifiers, generics, or where clause
 function:
-    FN IDENTIFIER LBRACKET function_parameters? RBRACKET function_return_type? block_expression;
+    FN IDENTIFIER LBRACKET function_parameters? RBRACKET function_return_type? (block_expression | SEMI);
 
 function_parameters:
     function_param_pattern (COMMA function_param_pattern)*;
