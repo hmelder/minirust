@@ -55,8 +55,10 @@ export namespace VM {
 
     export interface MovInstr {
         opcode: 'MOV'
-        srcOff: number
-        destOff: number
+        srcOff?: number
+        srcLoc?: MemoryLocation
+        destOff?: number
+        destLoc?: MemoryLocation
         type: DataType
     }
 
@@ -251,6 +253,36 @@ export namespace VM {
             }
         }
 
+        private readHeap(type: DataType, off: number): number {
+            const heap = this.state.heap
+            const addr = this.getLocalOffset(off)
+            switch (type) {
+                case 'bool':
+                case 'u32':
+                    return heap.readUint32(addr)
+                case 'i32':
+                    return heap.readInt32(addr)
+                default:
+                    throw new Error(`Unsupported type ${type} in instruction`)
+            }
+        }
+
+        private writeHeap(value: Data, type: DataType, off: number) {
+            const heap = this.state.heap
+            const addr = this.getLocalOffset(off)
+            switch (type) {
+                case 'bool':
+                case 'u32':
+                    heap.writeUint32(addr, value)
+                    break
+                case 'i32':
+                    heap.writeInt32(addr, value)
+                    break
+                default:
+                    throw new Error(`Unsupported type ${type} in instruction`)
+            }
+        }
+
         private instructionSet = {
             // Arithmetic operations
             ADD: (instr: NoArgInstr) => {
@@ -342,8 +374,36 @@ export namespace VM {
                 this.state.ip += 1
             },
             MOV: (instr: MovInstr) => {
-                const value = this.readStack(instr.type, instr.srcOff)
-                this.writeStack(value, instr.type, instr.destOff)
+                const stack = this.state.stack
+
+                let value: number
+                let srcAddr: number
+                let destAddr: number
+
+                // Use imm or pop from stack?
+                if (instr.srcOff != undefined) {
+                    srcAddr = instr.srcOff
+                } else {
+                    srcAddr = stack.popUint32()
+                }
+                if (instr.destOff != undefined) {
+                    destAddr = instr.destOff
+                } else {
+                    destAddr = stack.popUint32()
+                }
+
+                if (instr.srcLoc === undefined || instr.srcLoc === 'S') {
+                    value = this.readStack(instr.type, srcAddr)
+                } else {
+                    value = this.readHeap(instr.type, srcAddr)
+                }
+
+                if (instr.destLoc === undefined || instr.destLoc === 'S') {
+                    this.writeStack(value, instr.type, destAddr)
+                } else {
+                    this.writeHeap(value, instr.type, destAddr)
+                }
+
                 this.state.ip += 1
             },
 
