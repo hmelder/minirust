@@ -19,6 +19,51 @@ export class MIRToVMLowering {
         this.ip = 3
     }
 
+    writeFunc(name: string): boolean {
+        switch (name) {
+            case 'malloc':
+                // u32 malloc(u32 size)
+                this.got.set('malloc', this.ip)
+                this.pushInstrs([
+                    { opcode: 'PUSHA', off: -4, type: 'u32' }, // Push first argument to stack
+                    { opcode: 'MALLOC' },
+                    { opcode: 'MOV', srcOff: 0, destOff: -3, type: 'u32' }, // Copy address into return field
+                    { opcode: 'RETURN' },
+                ])
+                break
+            case 'free':
+                // void free(u32 address)
+                this.got.set('free', this.ip)
+                this.pushInstrs([
+                    { opcode: 'PUSHA', off: -4, type: 'u32' }, // Push first argument to stack
+                    { opcode: 'FREE' },
+                    { opcode: 'RETURN' },
+                ])
+                break
+            case 'write':
+                this.got.set('write', this.ip)
+                // void write(u32 address, u32 value)
+                this.pushInstrs([
+                    // NOTE: change if return field is omitted on void return
+                    { opcode: 'PUSHA', off: -5, type: 'u32' }, // Push 2nd argument (value) to stack
+                    { opcode: 'PUSHA', off: -4, type: 'u32' }, // Push 1st argument (address) to stack
+                    {
+                        opcode: 'MOV',
+                        srcLoc: 'S',
+                        srcOff: 0, // Read value from stack at FP + 0
+                        destLoc: 'H', // Pop heap address from stack
+                        type: 'u32',
+                    },
+                    { opcode: 'RETURN' },
+                ])
+                break
+            default:
+                return false // not a build-in
+        }
+
+        return true
+    }
+
     pushInstr(instr: VM.Instr) {
         this.instrs.push(instr)
         this.ip += 1
@@ -76,6 +121,16 @@ export class MIRToVMLowering {
                         `Expected patch field in 'CALL' instruction IP=${i}`
                     )
                 }
+
+                // If a function is not present in GOT it might be a built-in
+                // that needs to be copied into the instruction sequence.
+                if (!this.got.has(current.patch)) {
+                    if (!this.writeFunc(current.patch)) {
+                        throw new Error(
+                            `Function ${current.patch} is not present in GOT and not a built-in`
+                        )
+                    }
+                }
                 const ip = this.got.get(current.patch)
 
                 this.instrs[i] = { opcode: 'CALL', ip: ip }
@@ -103,13 +158,19 @@ export class MIRToVMLowering {
                         break
                     case 'arithmeticOp':
                         // Push left operand
-                        const leftInstrs = this.lowerOperandToStack(stmt.rvalue.left, func)
+                        const leftInstrs = this.lowerOperandToStack(
+                            stmt.rvalue.left,
+                            func
+                        )
                         this.pushInstrs(leftInstrs)
-                        
+
                         // Push right operand
-                        const rightInstrs = this.lowerOperandToStack(stmt.rvalue.right, func)
+                        const rightInstrs = this.lowerOperandToStack(
+                            stmt.rvalue.right,
+                            func
+                        )
                         this.pushInstrs(rightInstrs)
-                        
+
                         // Perform arithmetic operation
                         let opcode: VM.Op
                         switch (stmt.rvalue.op) {
@@ -126,15 +187,17 @@ export class MIRToVMLowering {
                                 opcode = 'DIV'
                                 break
                             default:
-                                throw new Error(`Unsupported arithmetic operation: ${stmt.rvalue.op}`)
+                                throw new Error(
+                                    `Unsupported arithmetic operation: ${stmt.rvalue.op}`
+                                )
                         }
                         this.pushInstr({ opcode })
-                        
+
                         // Store result
                         this.pushInstr({
                             opcode: 'POPA',
                             off: this.nextLocalId++,
-                            type: stmt.rvalue.type
+                            type: stmt.rvalue.type,
                         })
                         break
                     default:
