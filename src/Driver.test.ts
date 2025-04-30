@@ -73,6 +73,15 @@ test('Type Checker Tests', async (t) => {
             assert.fail(e)
         }
     })
-
-    
+    await t.test('evalutes intrinsic function calls', () => {
+        try {
+            const result = evaluate(
+                'fn malloc(size: u32) -> u32; fn write(addr: u32, value: u32); fn main() -> u32 { let size: u32 = 4; let addr: u32 = malloc(size); let value: u32 = 42; let ret = write(addr, value); return addr; }'
+            )
+            console.warn(result)
+            //assert.strictEqual(result, 10)
+        } catch (e) {
+            assert.fail(e)
+        }
+    })
 })

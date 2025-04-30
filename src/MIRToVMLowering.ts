@@ -4,7 +4,6 @@ import { VM } from './vm/VM'
 export class MIRToVMLowering {
     private program: MIR.Program
     private got: Map<MIR.FuncId, number> // global offset table
-    private nextLocalId: VM.LocalId
     private instrs: VM.Instr[]
     private ip: number
 
@@ -32,21 +31,21 @@ export class MIRToVMLowering {
                 ])
                 break
             case 'free':
-                // void free(u32 address)
+                // unit free(u32 address)
                 this.got.set('free', this.ip)
                 this.pushInstrs([
-                    { opcode: 'PUSHA', off: -4, type: 'u32' }, // Push first argument to stack
+                    { opcode: 'PUSHA', off: -3, type: 'u32' }, // Push first argument to stack
                     { opcode: 'FREE' },
                     { opcode: 'RETURN' },
                 ])
                 break
             case 'write':
                 this.got.set('write', this.ip)
-                // void write(u32 address, u32 value)
+                // unit write(u32 address, u32 value)
                 this.pushInstrs([
                     // NOTE: change if return field is omitted on void return
-                    { opcode: 'PUSHA', off: -5, type: 'u32' }, // Push 2nd argument (value) to stack
-                    { opcode: 'PUSHA', off: -4, type: 'u32' }, // Push 1st argument (address) to stack
+                    { opcode: 'PUSHA', off: -4, type: 'u32' }, // Push 2nd argument (value) to stack
+                    { opcode: 'PUSHA', off: -3, type: 'u32' }, // Push 1st argument (address) to stack
                     {
                         opcode: 'MOV',
                         srcLoc: 'S',
@@ -151,7 +150,7 @@ export class MIRToVMLowering {
                     case 'literal':
                         this.pushInstr({
                             opcode: 'ASSIGN',
-                            off: this.nextLocalId++,
+                            off: stmt.place.id,
                             value: stmt.rvalue.value,
                             type: stmt.rvalue.type,
                         })
@@ -196,7 +195,7 @@ export class MIRToVMLowering {
                         // Store result
                         this.pushInstr({
                             opcode: 'POPA',
-                            off: this.nextLocalId++,
+                            off: stmt.place.id,
                             type: stmt.rvalue.type,
                         })
                         break
@@ -253,23 +252,28 @@ export class MIRToVMLowering {
             for (let arg of terminator.args.reverse()) {
                 this.pushInstrs(this.lowerOperandToStack(arg, func))
             }
-            // 2. Allocate space for return value
-            this.pushInstr({
-                opcode: 'ALLOCA',
-                length: 1,
-            })
+
+            // 2. Allocate space for return value if required
+            if (retType !== 'unit') {
+                this.pushInstr({
+                    opcode: 'ALLOCA',
+                    length: 1,
+                })
+            }
             // 3. Call target (must be patched up)
             this.pushInstr({
                 opcode: 'CALL',
                 ip: -1,
                 patch: funcId,
             })
-            // 4. Move result into local
-            this.pushInstr({
-                opcode: 'POPA',
-                off: retPlace.id,
-                type: retType,
-            })
+            // 4. Move result into local if required
+            if (retType !== 'unit') {
+                this.pushInstr({
+                    opcode: 'POPA',
+                    off: retPlace.id,
+                    type: retType,
+                })
+            }
             // 5. Cleanup arguments from stack
             // FIXME: This assumes that all args are 4 bytes
             if (terminator.args.length !== 0) {
@@ -289,7 +293,6 @@ export class MIRToVMLowering {
     }
 
     private lowerFunction(func: MIR.Function) {
-        this.nextLocalId = 0
         const blockDirectory = new Map<MIR.BasicBlockId, number>()
 
         // 1. Create stack frame

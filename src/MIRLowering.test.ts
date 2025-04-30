@@ -408,4 +408,120 @@ test('MIR Lowering', async (t) => {
                 }
             )
         })
+    await t.test('should lower function calls to intrinsic', () => {})
+    const funcMap = new Map<MIR.FuncId, MIR.Function>()
+
+    // Main Function
+    funcMap.set('main', {
+        name: 'main',
+        entryBlockId: 0,
+        blocks: [
+            {
+                id: 0,
+                statements: [
+                    {
+                        kind: 'assign',
+                        place: {
+                            id: 0,
+                            kind: 'local',
+                        },
+                        rvalue: {
+                            kind: 'literal',
+                            type: 'i32',
+                            value: 4,
+                        },
+                    },
+                ],
+                terminator: {
+                    args: [
+                        {
+                            kind: 'use',
+                            place: {
+                                id: 0,
+                                kind: 'local',
+                            },
+                        },
+                    ],
+                    func: 'malloc',
+                    kind: 'call',
+                    returnValue: {
+                        id: 1,
+                        kind: 'local',
+                    },
+                },
+            },
+            {
+                id: 1,
+                statements: [
+                    {
+                        kind: 'assign',
+                        place: {
+                            id: 2,
+                            kind: 'local',
+                        },
+                        rvalue: {
+                            kind: 'literal',
+                            type: 'i32',
+                            value: 42,
+                        },
+                    },
+                ],
+                terminator: {
+                    args: [
+                        {
+                            kind: 'use',
+                            place: {
+                                id: 1,
+                                kind: 'local',
+                            },
+                        },
+                        {
+                            kind: 'use',
+                            place: {
+                                id: 2,
+                                kind: 'local',
+                            },
+                        },
+                    ],
+                    func: 'write',
+                    kind: 'call',
+                    returnValue: {
+                        id: 3,
+                        kind: 'local',
+                    },
+                },
+            },
+            {
+                id: 2,
+                statements: [],
+                terminator: {
+                    kind: 'return',
+                    rvalue: {
+                        kind: 'use',
+                        place: {
+                            id: 1,
+                            kind: 'local',
+                        },
+                    },
+                },
+            },
+        ],
+        locals: [
+            { name: 'size', scope: 1, type: 'i32' }, // 4 (size arg)
+            { name: 'addr', scope: 1, type: 'u32' }, // return addr
+            { name: 'value', scope: 1, type: 'i32' }, // 42 (value arg)
+            { name: 'ret', scope: 1, type: 'unit' }, // unit return
+        ],
+        localCounter: 4,
+        blockCounter: 3,
+        argCount: 0,
+        returnType: 'u32',
+    })
+    const actual = lowerProg(
+        'fn malloc(size: u32) -> u32; fn write(addr: u32, value: u32); fn main() -> u32 { let size: u32 = 4; let addr: u32 = malloc(size); let value: u32 = 42; let ret = write(addr, value); return addr; }'
+    )
+    assert.deepStrictEqual(actual, {
+        functions: funcMap,
+        entryFunction: 'main',
+    })
 })
